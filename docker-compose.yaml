@@ -1,22 +1,9 @@
+# Änderung: Single-Service Docker Compose für SQLite
+# Grund: Einfacheres Deployment, persistente SQLite-Datenbank über Volume
+
 version: '3.8'
 
 services:
-  postgres:
-    image: postgres:15-alpine
-    container_name: urlaubsantrag-db
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: urlaubsantrag
-      POSTGRES_USER: urlaubsuser
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-securepassword123}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U urlaubsuser -d urlaubsantrag"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   app:
     build:
       context: .
@@ -25,14 +12,15 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      DATABASE_URL: postgresql://urlaubsuser:${DB_PASSWORD:-securepassword123}@postgres:5432/urlaubsantrag
+      DATABASE_URL: file:/app/data/production.db
       JWT_SECRET: ${JWT_SECRET:-ihr-super-geheimer-jwt-schluessel-2024-production}
       PORT: 3000
     ports:
       - "3000:3000"
-    depends_on:
-      postgres:
-        condition: service_healthy
+    volumes:
+      # Änderung: SQLite-Datenbank persistent speichern
+      # Grund: Daten bleiben bei Container-Neustarts erhalten
+      - sqlite_data:/app/data
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
       interval: 30s
@@ -41,4 +29,5 @@ services:
       start_period: 40s
 
 volumes:
-  postgres_data:
+  sqlite_data:
+    driver: local

@@ -5,7 +5,9 @@
   "main": "index.js",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "npm run build:server && npm run build:client",
+    "build:server": "tsc --project tsconfig.node.json",
+    "build:client": "vite build",
     "preview": "vite preview",
     "server": "tsx src/server/index.ts",
     "dev:full": "concurrently \"npm run server\" \"npm run dev\"",

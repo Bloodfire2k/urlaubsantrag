@@ -59,7 +59,7 @@ app.use(express.static(path.join(__dirname, '../../dist')))
 async function initDatabase() {
   try {
     await prisma.$connect()
-    console.log('✅ PostgreSQL-Datenbankverbindung erfolgreich')
+    console.log('✅ SQLite-Datenbankverbindung erfolgreich')
     
     // Teste Verbindung
     await prisma.$queryRaw`SELECT 1`
@@ -84,7 +84,7 @@ app.get('/api/health', async (req, res) => {
     res.json({ 
       status: 'OK', 
       timestamp: new Date().toISOString(),
-      database: 'connected (PostgreSQL)',
+      database: 'connected (SQLite)',
       version: process.env.npm_package_version || '1.0.0'
     })
   } catch (error) {
@@ -128,7 +128,7 @@ process.on('SIGTERM', async () => {
 app.listen(PORT, async () => {
   console.log(`🚀 Production Server läuft auf Port ${PORT}`)
   console.log(`🌍 Umgebung: ${process.env.NODE_ENV}`)
-  console.log(`💾 Datenbank: PostgreSQL`)
+  console.log(`💾 Datenbank: SQLite`)
   
   await initDatabase()
   
