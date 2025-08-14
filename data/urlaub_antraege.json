@@ -1,0 +1,92 @@
+[
+  {
+    "mitarbeiterId": 7,
+    "startDatum": "2026-01-05",
+    "endDatum": "2026-01-13",
+    "bemerkung": "",
+    "status": "pending",
+    "id": 2,
+    "created_at": "2025-08-13T13:12:00.994Z",
+    "updated_at": "2025-08-13T13:12:00.994Z"
+  },
+  {
+    "mitarbeiterId": 7,
+    "startDatum": "2026-01-01",
+    "endDatum": "2026-01-10",
+    "bemerkung": "",
+    "status": "pending",
+    "id": 4,
+    "created_at": "2025-08-13T13:28:27.260Z",
+    "updated_at": "2025-08-13T13:28:27.260Z"
+  },
+  {
+    "mitarbeiterId": 7,
+    "startDatum": "2026-02-02",
+    "endDatum": "2026-02-07",
+    "bemerkung": "",
+    "status": "pending",
+    "id": 6,
+    "created_at": "2025-08-13T13:44:42.986Z",
+    "updated_at": "2025-08-13T13:44:42.986Z"
+  },
+  {
+    "mitarbeiterId": 7,
+    "startDatum": "2026-07-13",
+    "endDatum": "2026-07-25",
+    "bemerkung": "",
+    "status": "pending",
+    "id": 9,
+    "created_at": "2025-08-13T14:17:26.867Z",
+    "updated_at": "2025-08-13T14:17:26.867Z"
+  },
+  {
+    "mitarbeiterId": 8,
+    "startDatum": "2026-02-02",
+    "endDatum": "2026-02-14",
+    "bemerkung": "",
+    "status": "pending",
+    "id": 10,
+    "created_at": "2025-08-13T16:21:22.175Z",
+    "updated_at": "2025-08-13T16:21:22.175Z"
+  },
+  {
+    "mitarbeiterId": 8,
+    "startDatum": "2026-01-23",
+    "endDatum": "2026-01-24",
+    "bemerkung": "",
+    "status": "pending",
+    "id": 11,
+    "created_at": "2025-08-13T16:21:29.242Z",
+    "updated_at": "2025-08-13T16:21:29.242Z"
+  },
+  {
+    "mitarbeiterId": 8,
+    "startDatum": "2026-09-14",
+    "endDatum": "2026-09-26",
+    "bemerkung": "",
+    "status": "pending",
+    "id": 12,
+    "created_at": "2025-08-14T15:00:30.232Z",
+    "updated_at": "2025-08-14T15:00:30.232Z"
+  },
+  {
+    "mitarbeiterId": 8,
+    "startDatum": "2026-10-19",
+    "endDatum": "2026-10-29",
+    "bemerkung": "",
+    "status": "pending",
+    "id": 13,
+    "created_at": "2025-08-14T15:20:50.603Z",
+    "updated_at": "2025-08-14T15:20:50.603Z"
+  },
+  {
+    "mitarbeiterId": 8,
+    "startDatum": "2026-10-30",
+    "endDatum": "2026-10-30",
+    "bemerkung": "",
+    "status": "pending",
+    "id": 14,
+    "created_at": "2025-08-14T15:21:03.525Z",
+    "updated_at": "2025-08-14T15:21:03.525Z"
+  }
+]

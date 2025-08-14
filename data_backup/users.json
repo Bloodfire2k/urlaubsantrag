@@ -1,0 +1,92 @@
+[
+  {
+    "id": 2,
+    "username": "admin",
+    "email": "admin@unternehmen.de",
+    "fullName": "Unternehmer Admin",
+    "password_hash": "$2a$12$Vvr4CtsWXG76RYtY4ka5uOfPipcxWHWKT12JOyW8nyxBZ4D4RW/oW",
+    "role": "admin",
+    "market_id": 2,
+    "is_active": true,
+    "created_at": "2025-08-13T12:08:15.357Z",
+    "updated_at": "2025-08-13T12:08:15.357Z"
+  },
+  {
+    "id": 3,
+    "username": "max.mustermann",
+    "email": "max@unternehmen.de",
+    "fullName": "Max Mustermann",
+    "password_hash": "$2a$12$jNzbALnZcFwqfiZZalig5O8JfuIxtKFoF80B0c/JE/JRFdG762ffW",
+    "role": "employee",
+    "market_id": 2,
+    "department": "Entwicklung",
+    "is_active": true,
+    "created_at": "2025-08-13T12:08:16.217Z",
+    "updated_at": "2025-08-13T12:08:16.217Z"
+  },
+  {
+    "id": 4,
+    "username": "anna.schmidt",
+    "email": "anna@unternehmen.de",
+    "fullName": "Anna Schmidt",
+    "password_hash": "$2a$12$c4uTBB69lzn1IxrJOTD0Su3tumsX2Gd7yZh/A217R.wHrAk.Cb9LK",
+    "role": "employee",
+    "market_id": 3,
+    "department": "Marketing",
+    "is_active": true,
+    "created_at": "2025-08-13T12:08:16.217Z",
+    "updated_at": "2025-08-13T12:08:16.217Z"
+  },
+  {
+    "id": 5,
+    "username": "manager1",
+    "email": "manager1@unternehmen.de",
+    "fullName": "Markt Manager 1",
+    "password_hash": "$2a$12$0U/GlclvrDnmuSdxLD1fXOtT9HKvZ7daO6KlPZxIx1McXFUEzhKFu",
+    "role": "manager",
+    "market_id": 2,
+    "department": "Geschäftsführung",
+    "is_active": true,
+    "created_at": "2025-08-13T12:08:16.217Z",
+    "updated_at": "2025-08-13T12:08:16.217Z"
+  },
+  {
+    "id": 6,
+    "username": "manager2",
+    "email": "manager2@unternehmen.de",
+    "fullName": "Markt Manager 2",
+    "password_hash": "$2a$12$0U/GlclvrDnmuSdxLD1fXOtT9HKvZ7daO6KlPZxIx1McXFUEzhKFu",
+    "role": "manager",
+    "market_id": 3,
+    "department": "Geschäftsführung",
+    "is_active": true,
+    "created_at": "2025-08-13T12:08:16.217Z",
+    "updated_at": "2025-08-13T12:08:16.217Z"
+  },
+  {
+    "username": "susanne.asel",
+    "email": "susanne.asel@ecenter.de",
+    "fullName": "Susanne Asel",
+    "password_hash": "$2a$12$jNzbALnZcFwqfiZZalig5O8JfuIxtKFoF80B0c/JE/JRFdG762ffW",
+    "role": "employee",
+    "market_id": 2,
+    "department": "Markt",
+    "is_active": true,
+    "id": 7,
+    "created_at": "2025-08-13T13:10:14.704Z",
+    "updated_at": "2025-08-13T13:10:14.704Z"
+  },
+  {
+    "username": "test.user",
+    "email": "test.user@ecenter.de",
+    "fullName": "test user",
+    "password_hash": "$2a$12$T.lwsDpdW1pkLFahJ43WLe4J6OWzw2Ry9VSVOn3wf8Ka3qf1WDufe",
+    "role": "employee",
+    "market_id": 2,
+    "department": "Markt",
+    "is_active": true,
+    "id": 8,
+    "created_at": "2025-08-13T16:07:41.298Z",
+    "updated_at": "2025-08-13T16:07:41.298Z"
+  }
+]

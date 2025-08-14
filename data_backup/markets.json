@@ -1,0 +1,20 @@
+[
+  {
+    "id": 2,
+    "name": "E-Center",
+    "address": "Musterstraße 1, 12345 Musterstadt",
+    "phone": "+49 123 456789",
+    "email": "info@ecenter.de",
+    "created_at": "2025-08-13T12:08:15.052Z",
+    "updated_at": "2025-08-13T12:08:15.053Z"
+  },
+  {
+    "id": 3,
+    "name": "Edeka",
+    "address": "Beispielweg 15, 54321 Beispielstadt",
+    "phone": "+49 987 654321",
+    "email": "info@edeka.de",
+    "created_at": "2025-08-13T12:08:15.053Z",
+    "updated_at": "2025-08-13T12:08:15.053Z"
+  }
+]
