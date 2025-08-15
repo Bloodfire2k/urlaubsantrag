@@ -14,6 +14,8 @@ Dieses Dokument beschreibt die durchgeführten Refactoring-Maßnahmen zur Verbes
 
 | `src/components/AdminUrlaubsUebersichtInline.tsx` | 618/21 KB | - `src/types/admin/overview.ts` (40 Zeilen)<br>- `src/services/admin/overviewService.ts` (150 Zeilen)<br>- `src/hooks/admin/useOverviewData.ts` (120 Zeilen)<br>- `src/components/admin/overview/OverviewStats.tsx` (50 Zeilen)<br>- `src/components/admin/overview/OverviewFilters.tsx` (80 Zeilen)<br>- `src/components/admin/overview/EmployeeList.tsx` (150 Zeilen)<br>- `src/components/admin/overview/EmployeeDetails.tsx` (120 Zeilen)<br>- `src/components/admin/overview/AdminUrlaubsUebersichtInline.tsx` (80 Zeilen) | - Trennung von Statistik und UI<br>- Wiederverwendbare Komponenten<br>- Bessere Testbarkeit<br>- Reduzierte Komplexität | - Statistik-Logik in Service<br>- State-Management in Hook<br>- Keine Änderung am Verhalten |
 
+| `src/server/index.ts` | 83/3 KB | - `src/server/config/app.ts` (40 Zeilen)<br>- `src/server/config/cors.ts` (15 Zeilen)<br>- `src/server/config/security.ts` (20 Zeilen)<br>- `src/server/middleware/errorHandler.ts` (10 Zeilen)<br>- `src/server/middleware/notFoundHandler.ts` (5 Zeilen)<br>- `src/server/utils/shutdown.ts` (10 Zeilen)<br>- `src/server/utils/healthCheck.ts` (15 Zeilen)<br>- `src/server/index.ts` (25 Zeilen) | - Trennung von Konfiguration und Logik<br>- Bessere Wartbarkeit<br>- Wiederverwendbare Middleware<br>- Reduzierte Komplexität | - Konfiguration in eigenen Modulen<br>- Middleware ausgelagert<br>- Keine Änderung am Verhalten |
+
 ## Nächste Schritte
 
 Die folgenden Dateien sind als nächstes für Refactoring vorgesehen:
