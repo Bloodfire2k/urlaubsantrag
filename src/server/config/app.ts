@@ -1,6 +1,8 @@
 import express from 'express'
+import swaggerUi from 'swagger-ui-express'
 import { corsConfig } from './cors'
 import { helmetConfig, rateLimiter } from './security'
+import { swaggerSpec } from './swagger'
 import { errorHandler } from '../middleware/errorHandler'
 import { notFoundHandler } from '../middleware/notFoundHandler'
 import { authRoutes } from '../routes/auth'
@@ -27,6 +29,12 @@ export const createApp = () => {
   app.use('/api/urlaub', urlaubRoutes)
   app.use('/api/markets', marktRoutes)
   app.use('/api/health', healthCheckRoute)
+
+  // Swagger UI
+  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+    customCss: '.swagger-ui .topbar { display: none }',
+    customSiteTitle: 'Urlaubsantrag API Dokumentation'
+  }))
 
   // Error Handling
   app.use(errorHandler)

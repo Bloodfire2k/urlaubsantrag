@@ -6,9 +6,9 @@ import { User, LoginCredentials, AuthState, RegisterData } from '../types/auth'
 const getApiBaseUrl = () => {
   const hostname = window.location.hostname
   if (hostname === 'localhost' || hostname === '127.0.0.1') {
-    return 'http://localhost:3001/api'
+    return 'http://localhost:3002/api' // Änderung: Port auf 3002 geändert. Grund: Backend läuft jetzt auf Port 3002
   } else {
-    return `http://${hostname}:3001/api`
+    return `http://${hostname}:3002/api`
   }
 }
 const API_BASE_URL = getApiBaseUrl()
@@ -18,6 +18,7 @@ interface AuthContextType extends AuthState {
   logout: () => void
   register: (data: RegisterData) => Promise<boolean>
   getCurrentUser: () => User | null
+  getToken: () => string | null
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -175,12 +176,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return state.user
   }
 
+  // Änderung: getToken Funktion hinzugefügt. Grund: Zentrale Token-Verwaltung im AuthContext
+  const getToken = (): string | null => {
+    return localStorage.getItem('urlaub_token')
+  }
+
   const value: AuthContextType = {
     ...state,
     login,
     logout,
     register,
-    getCurrentUser
+    getCurrentUser,
+    getToken
   }
 
   return (

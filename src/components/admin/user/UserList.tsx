@@ -1,10 +1,22 @@
 import React from 'react'
-import { User, Building, ChevronRight, UserPlus, Trash2, Edit, Lock, Ban, Eye } from 'lucide-react'
+import { User, Building, ChevronRight, UserPlus, Trash2, Edit, Lock, Ban, Eye, Calendar, Users, Shield, MapPin } from 'lucide-react'
+import { User as UserType } from '../../../types/admin/user'
 import { useUserManagement } from '../../../hooks/admin/useUserManagement'
 import { UserStatusBadge } from './UserStatusBadge'
 import { UserModal } from './UserModal'
 import { useAuth } from '../../../contexts/AuthContext'
 import { useYear } from '../../../contexts/YearContext'
+
+const getRoleIcon = (role: string) => {
+  switch (role) {
+    case 'admin':
+      return <Shield className="w-8 h-8 text-purple-500" />
+    case 'manager':
+      return <Building className="w-8 h-8 text-blue-500" />
+    default:
+      return <User className="w-8 h-8 text-gray-500" />
+  }
+}
 
 const UserList: React.FC = () => {
   const { user } = useAuth()
@@ -41,6 +53,17 @@ const UserList: React.FC = () => {
     )
   }
 
+  const getRoleIcon = (role: string) => {
+    switch (role) {
+      case 'admin':
+        return <Shield className="w-8 h-8 text-purple-500" />
+      case 'manager':
+        return <Building className="w-8 h-8 text-blue-500" />
+      default:
+        return <User className="w-8 h-8 text-gray-500" />
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -51,28 +74,17 @@ const UserList: React.FC = () => {
 
   return (
     <>
-      <div className="card-modern bg-base-100 shadow max-w-6xl mx-auto">
+      <div className="card bg-base-100 shadow-xl border border-base-300 rounded-2xl">
         <div className="card-body">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h2 className="card-title text-2xl mb-2">
-                👥 Mitarbeiter-Verwaltung
-              </h2>
-              <p className="text-base-content/70">
-                Verwalten Sie Mitarbeiter für E-Center und Edeka
-              </p>
-            </div>
-            
-            {/* Jahresinfo */}
-            <div className="flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-blue-600" />
-              <span className="text-sm font-medium text-gray-700">Urlaubsjahr: {selectedYear}</span>
-            </div>
-          </div>
+          <h2 className="card-title text-2xl md:text-3xl mb-4">
+            👥 Mitarbeiter-Verwaltung
+          </h2>
+          <p className="text-base-content/70 mb-6">
+            Verwalten Sie Mitarbeiter für E-Center und Edeka
+          </p>
 
           {/* Statistiken */}
-          <div className="stats-modern">
+          <div className="grid grid-cols-4 gap-4 mb-8">
             <div className="stat-card-modern">
               <div className="stat-figure text-white mb-4">
                 <Users className="w-8 h-8" />
@@ -111,13 +123,11 @@ const UserList: React.FC = () => {
           </div>
 
           {/* Info über fixe Märkte */}
-          <div className="bg-blue-50 p-4 rounded-xl mb-8 border border-blue-200">
-            <div className="flex items-center">
-              <Building size={20} className="text-blue-600 mr-2" />
-              <div>
-                <h4 className="text-sm font-semibold text-blue-900">Verfügbare Märkte</h4>
-                <p className="text-sm text-blue-600">E-Center und Edeka (fest konfiguriert)</p>
-              </div>
+          <div className="alert alert-info mb-8">
+            <Building size={20} />
+            <div>
+              <h4 className="font-bold">Verfügbare Märkte</h4>
+              <p className="text-sm">E-Center und Edeka (fest konfiguriert)</p>
             </div>
           </div>
 
@@ -132,114 +142,85 @@ const UserList: React.FC = () => {
                   setShowCreateForm(true)
                   setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100)
                 }}
-                className="btn-modern btn-primary-modern flex items-center gap-2"
+                className="btn btn-primary btn-md gap-2"
               >
                 <UserPlus size={18} />
                 Neuen Mitarbeiter
               </button>
             </div>
 
-            <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
-              <div className="bg-gray-50 p-4 border-b border-gray-200">
-                <div className="grid grid-cols-[2fr_1fr_2fr_1fr_1fr_1fr] gap-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  <div>Name</div>
-                  <div>Rolle</div>
-                  <div>Markt & Abteilung</div>
-                  <div>Urlaub</div>
-                  <div>Status</div>
-                  <div>Aktionen</div>
-                </div>
-              </div>
-
-              <div>
-                {users.map((user, index) => (
-                  <div 
-                    key={user.id}
-                    className={`p-5 ${index < users.length - 1 ? 'border-b border-gray-100' : ''}`}
-                  >
-                    <div className="grid grid-cols-[2fr_1fr_2fr_1fr_1fr_1fr] gap-4 items-center">
-                      <div className="flex items-center">
-                        {getRoleIcon(user.role)}
-                        <div className="ml-3">
-                          <div className="text-sm font-medium text-gray-900">{user.fullName}</div>
-                          <div className="text-xs text-gray-500">{user.username}</div>
-                          <div className="text-xs text-gray-500">{user.email}</div>
+            <div className="space-y-4">
+              {users.map(user => (
+                <div
+                  key={user.id}
+                  className="list-item-modern card border border-base-300 bg-base-100 shadow rounded-2xl"
+                >
+                  <div className="card-body p-6">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div>
+                          <div className="font-bold text-lg">{user.fullName}</div>
+                          <div className="flex items-center gap-2 text-gray-500 text-sm mt-1">
+                            <User className="w-4 h-4" />
+                            <span>{user.username} • {user.email}</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-gray-500 text-sm mt-1">
+                            <Building className="w-4 h-4" />
+                            <span>
+                              {markets.find(m => m.id === user.market_id)?.name || 'Unbekannt'}
+                              {user.department && ` • ${user.department}`}
+                            </span>
+                          </div>
                         </div>
                       </div>
-
-                      <div>
+                      
+                      <div className="flex items-center gap-4">
                         <UserStatusBadge user={user} />
-                      </div>
-
-                      <div>
-                        <div className="text-sm font-medium text-gray-900">
-                          🏪 {markets.find(m => m.id === user.market_id)?.name || 'Unbekannt'}
-                        </div>
-                        {user.department && (
-                          <div className="text-xs text-gray-500">📋 {user.department}</div>
-                        )}
-                      </div>
-
-                      <div>
-                        <div className="text-sm text-gray-900">
-                          <span className="font-medium">36</span> Tage/Jahr
-                        </div>
-                        <div className="text-xs text-gray-500">Resturlaub: später</div>
-                      </div>
-
-                      <div>
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          user.is_active 
-                            ? 'bg-green-100 text-green-800' 
-                            : 'bg-red-100 text-red-800'
-                        }`}>
-                          {user.is_active ? '✅ Aktiv' : '❌ Inaktiv'}
+                        
+                        <span className={`badge ${user.is_active ? 'badge-success' : 'badge-error'} text-white font-medium px-4 py-2 rounded-full`}>
+                          {user.is_active ? 'AKTIV' : 'INAKTIV'}
                         </span>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => handleEditUser(user)}
-                          className="p-1.5 bg-blue-50 text-blue-600 rounded hover:bg-blue-100"
-                          title="Mitarbeiter bearbeiten"
-                        >
-                          <Edit size={16} />
-                        </button>
-
-                        <button
-                          onClick={() => handleResetPassword(user.id)}
-                          className="p-1.5 bg-amber-50 text-amber-600 rounded hover:bg-amber-100"
-                          title="Passwort zurücksetzen"
-                        >
-                          <Lock size={16} />
-                        </button>
-
-                        <button
-                          onClick={() => handleToggleUserStatus(user.id, user.is_active)}
-                          className={`p-1.5 rounded ${
-                            user.is_active 
-                              ? 'bg-amber-50 text-amber-600 hover:bg-amber-100'
-                              : 'bg-green-50 text-green-600 hover:bg-green-100'
-                          }`}
-                          title={user.is_active ? 'Mitarbeiter deaktivieren' : 'Mitarbeiter reaktivieren'}
-                        >
-                          {user.is_active ? <Ban size={16} /> : <Eye size={16} />}
-                        </button>
-
-                        {user.is_active && (
+                        
+                        <div className="flex items-center gap-2">
                           <button
-                            onClick={() => handleDeleteUser(user.id)}
-                            className="p-1.5 bg-red-900 text-white rounded hover:bg-red-800"
-                            title="Mitarbeiter DAUERHAFT löschen"
+                            onClick={() => handleEditUser(user)}
+                            className="btn btn-circle btn-outline btn-sm hover:btn-primary"
+                            title="Mitarbeiter bearbeiten"
                           >
-                            <Trash2 size={16} />
+                            <Edit size={16} />
                           </button>
-                        )}
+
+                          <button
+                            onClick={() => handleResetPassword(user.id)}
+                            className="btn btn-circle btn-outline btn-sm hover:btn-warning"
+                            title="Passwort zurücksetzen"
+                          >
+                            <Lock size={16} />
+                          </button>
+
+                          <button
+                            onClick={() => handleToggleUserStatus(user.id, user.is_active)}
+                            className="btn btn-circle btn-outline btn-sm hover:btn-warning"
+                            title={user.is_active ? 'Mitarbeiter deaktivieren' : 'Mitarbeiter reaktivieren'}
+                          >
+                            {user.is_active ? <Ban size={16} /> : <Eye size={16} />}
+                          </button>
+
+                          {user.is_active && (
+                            <button
+                              onClick={() => handleDeleteUser(user.id)}
+                              className="btn btn-circle btn-error btn-sm text-white"
+                              title="Mitarbeiter DAUERHAFT löschen"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
-                ))}
-              </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>

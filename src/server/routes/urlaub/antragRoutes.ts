@@ -7,6 +7,83 @@ import { createAuditLog } from '../../utils/audit/auditLogger'
 
 const router = Router()
 
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     Urlaub:
+ *       type: object
+ *       required:
+ *         - id
+ *         - mitarbeiterId
+ *         - startDatum
+ *         - endDatum
+ *         - status
+ *       properties:
+ *         id:
+ *           type: string
+ *           description: Die ID des Urlaubsantrags
+ *         mitarbeiterId:
+ *           type: number
+ *           description: Die ID des Mitarbeiters
+ *         mitarbeiterName:
+ *           type: string
+ *           description: Der Name des Mitarbeiters
+ *         startDatum:
+ *           type: string
+ *           format: date
+ *           description: Das Startdatum des Urlaubs
+ *         endDatum:
+ *           type: string
+ *           format: date
+ *           description: Das Enddatum des Urlaubs
+ *         status:
+ *           type: string
+ *           enum: [pending, approved, rejected]
+ *           description: Der Status des Urlaubsantrags
+ *         createdAt:
+ *           type: string
+ *           format: date-time
+ *           description: Der Zeitpunkt der Erstellung
+ */
+
+/**
+ * @swagger
+ * /urlaub:
+ *   get:
+ *     summary: Alle Urlaubsanträge abrufen
+ *     description: Ruft alle Urlaubsanträge ab, gefiltert nach Benutzerrolle und Jahr
+ *     tags: [Urlaub]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: jahr
+ *         schema:
+ *           type: integer
+ *         description: Das Jahr für die Filterung (optional)
+ *     responses:
+ *       200:
+ *         description: Liste der Urlaubsanträge
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 urlaubAntraege:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Urlaub'
+ *       401:
+ *         description: Nicht authentifiziert
+ *       403:
+ *         description: Keine Berechtigung
+ *       500:
+ *         description: Server-Fehler
+ */
+
 // Alle Urlaubsanträge abrufen
 router.get('/', authenticateToken, (req: Request, res: Response) => {
   try {
@@ -56,6 +133,57 @@ router.get('/:id', authenticateToken, (req: Request, res: Response) => {
   }
 })
 
+/**
+ * @swagger
+ * /urlaub:
+ *   post:
+ *     summary: Neuen Urlaubsantrag erstellen
+ *     description: Erstellt einen neuen Urlaubsantrag für den authentifizierten Benutzer
+ *     tags: [Urlaub]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - start_datum
+ *               - end_datum
+ *             properties:
+ *               start_datum:
+ *                 type: string
+ *                 format: date
+ *                 description: Das Startdatum des Urlaubs
+ *               end_datum:
+ *                 type: string
+ *                 format: date
+ *                 description: Das Enddatum des Urlaubs
+ *               bemerkung:
+ *                 type: string
+ *                 description: Optionale Bemerkung zum Urlaubsantrag
+ *     responses:
+ *       201:
+ *         description: Urlaubsantrag erfolgreich erstellt
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 urlaubAntrag:
+ *                   $ref: '#/components/schemas/Urlaub'
+ *       400:
+ *         description: Validierungsfehler
+ *       401:
+ *         description: Nicht authentifiziert
+ *       500:
+ *         description: Server-Fehler
+ */
 // Neuen Urlaubsantrag erstellen
 router.post('/', authenticateToken, (req: Request, res: Response) => {
   try {

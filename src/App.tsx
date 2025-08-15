@@ -1,6 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from './contexts/AuthContext'
 import { YearProvider, useYear } from './contexts/YearContext'
+import { ErrorBoundary } from './components/error/ErrorBoundary'
+import { RouteErrorBoundary } from './components/error/RouteErrorBoundary'
+import { ComponentErrorBoundary } from './components/error/ComponentErrorBoundary'
 import LoginForm from './components/LoginForm'
 import UrlaubForm from './components/UrlaubForm'
 import { UrlaubList } from './components/UrlaubList.tsx'
@@ -8,7 +11,7 @@ import Stats from './components/Stats.tsx'
 import UrlaubBilanz from './components/UrlaubBilanz'
 import AdminMitarbeiterVerwaltung from './components/admin/user/UserList'
 import Settings from './components/Settings'
-import AdminUrlaubsUebersichtInline from './components/AdminUrlaubsUebersichtInline'
+import AdminUrlaubsUebersichtInline from './components/admin/overview/AdminUrlaubsUebersichtInline'
 import Pruefung from './components/vacation/Pruefung'
 import { Urlaub, UrlaubBudget, convertUrlaubFromBackend, convertUrlaubBudgetFromBackend } from './types/urlaub'
 
@@ -391,99 +394,121 @@ function AppContent() {
       <main className="container py-8">
         
         {activeTab === 'urlaub' && (
-          <div className="space-y-8">
-            {user.role !== 'admin' && (
-              <>
-                {/* UrlaubForm - nur für normale Mitarbeiter */}
-                {/* Änderung: Urlaubsformular mit verbesserter Desktop-Zentrierung. Grund: Auf Desktop war es nicht richtig mittig */}
-                <div className="flex justify-center">
-                  <div className="card bg-base-100 shadow-xl border border-base-300 rounded-2xl w-full max-w-4xl">
-                  <div className="card-body gap-4">
-                    <h2 className="card-title text-2xl md:text-3xl justify-center">Neuer Urlaubsantrag</h2>
-                    <p className="text-base-content/70 text-center">Reichen Sie Ihren Urlaubsantrag ein</p>
-                    <UrlaubForm onSubmit={addUrlaub} existingUrlaube={urlaube} />
-                  </div>
-                  </div>
-                </div>
+          <RouteErrorBoundary>
+            <div className="space-y-8">
+              {user.role !== 'admin' && (
+                <>
+                  {/* UrlaubForm - nur für normale Mitarbeiter */}
+                  {/* Änderung: Urlaubsformular mit verbesserter Desktop-Zentrierung. Grund: Auf Desktop war es nicht richtig mittig */}
+                  <ComponentErrorBoundary name="Urlaubsantrag-Formular">
+                    <div className="flex justify-center">
+                      <div className="card bg-base-100 shadow-xl border border-base-300 rounded-2xl w-full max-w-4xl">
+                      <div className="card-body gap-4">
+                        <h2 className="card-title text-2xl md:text-3xl justify-center">Neuer Urlaubsantrag</h2>
+                        <p className="text-base-content/70 text-center">Reichen Sie Ihren Urlaubsantrag ein</p>
+                        <UrlaubForm onSubmit={addUrlaub} existingUrlaube={urlaube} />
+                      </div>
+                      </div>
+                    </div>
+                  </ComponentErrorBoundary>
 
-                {/* Statistiken - nur für normale Mitarbeiter */}
+                  {/* Statistiken - nur für normale Mitarbeiter */}
+                  <ComponentErrorBoundary name="Urlaubsstatistiken">
+                    <div className="card bg-base-100 shadow-xl border border-base-300 rounded-2xl">
+                      <div className="card-body gap-4">
+                        <h2 className="card-title text-2xl md:text-3xl">Meine Übersicht</h2>
+                        <p className="text-base-content/70">Ihre Urlaubsstatistiken</p>
+                        <Stats
+                          budget={budgets.find(b => b.mitarbeiterId === user.id.toString() && b.jahr === selectedYear)}
+                          urlaube={urlaube.filter(u => u.mitarbeiterId === user.id)}
+                        />
+                      </div>
+                    </div>
+                  </ComponentErrorBoundary>
+                </>
+              )}
+
+              {user.role === 'admin' && (
+                <>
+                  {/* Admin Urlaubsübersicht - Neue umfassende Komponente */}
+                  <ComponentErrorBoundary name="Admin-Urlaubsübersicht">
+                    <AdminUrlaubsUebersichtInline allUrlaube={urlaube} />
+                  </ComponentErrorBoundary>
+                </>
+              )}
+
+              {/* UrlaubList - für alle, aber mit unterschiedlichen Titeln */}
+              <ComponentErrorBoundary name="Urlaubsliste">
                 <div className="card bg-base-100 shadow-xl border border-base-300 rounded-2xl">
                   <div className="card-body gap-4">
-                    <h2 className="card-title text-2xl md:text-3xl">Meine Übersicht</h2>
-                    <p className="text-base-content/70">Ihre Urlaubsstatistiken</p>
-                    <Stats
-                      budget={budgets.find(b => b.mitarbeiterId === user.id.toString() && b.jahr === selectedYear)}
-                      urlaube={urlaube.filter(u => u.mitarbeiterId === user.id)}
+                    <h2 className="card-title text-2xl md:text-3xl">
+                      {user.role === 'admin' ? '👥 Alle Mitarbeiter-Anträge' : '📋 Meine Urlaubsanträge'}
+                    </h2>
+                    <p className="text-base-content/70">
+                      {user.role === 'admin' 
+                        ? 'Verwalten Sie die Urlaubsanträge aller Mitarbeiter' 
+                        : 'Alle Ihre eingereichten Anträge'}
+                    </p>
+                    {/* Searchbar */}
+                    <div className="form-control">
+                      <label className="input input-bordered flex items-center gap-2 rounded-xl">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 opacity-70">
+                          <path fillRule="evenodd" d="M10.5 3.75a6.75 6.75 0 1 0 4.217 12.042l4.745 4.746a.75.75 0 1 0 1.06-1.06l-4.746-4.746A6.75 6.75 0 0 0 10.5 3.75Zm-5.25 6.75a5.25 5.25 0 1 1 10.5 0 5.25 5.25 0 0 1-10.5 0Z" clipRule="evenodd" />
+                        </svg>
+                        <input
+                          type="text"
+                          value={search}
+                          onChange={(e) => setSearch(e.target.value)}
+                          className="grow"
+                          placeholder={user.role === 'admin' 
+                            ? "Nach Mitarbeiter-Anträgen suchen (Name, Datum, Status)" 
+                            : "Nach Anträgen suchen (Datum, Status, Bemerkung)"}
+                        />
+                      </label>
+                    </div>
+                    <UrlaubList
+                      urlaube={getFilteredUrlaube()}
+                    onDelete={deleteUrlaub}
+                    isAdmin={user.role === 'admin'}
                     />
                   </div>
                 </div>
-              </>
-            )}
-
-            {user.role === 'admin' && (
-              <>
-                {/* Admin Urlaubsübersicht - Neue umfassende Komponente */}
-                <AdminUrlaubsUebersichtInline allUrlaube={urlaube} />
-              </>
-            )}
-
-            {/* UrlaubList - für alle, aber mit unterschiedlichen Titeln */}
-            <div className="card bg-base-100 shadow-xl border border-base-300 rounded-2xl">
-              <div className="card-body gap-4">
-                <h2 className="card-title text-2xl md:text-3xl">
-                  {user.role === 'admin' ? '👥 Alle Mitarbeiter-Anträge' : '📋 Meine Urlaubsanträge'}
-                </h2>
-                <p className="text-base-content/70">
-                  {user.role === 'admin' 
-                    ? 'Verwalten Sie die Urlaubsanträge aller Mitarbeiter' 
-                    : 'Alle Ihre eingereichten Anträge'}
-                </p>
-                {/* Searchbar */}
-                <div className="form-control">
-                  <label className="input input-bordered flex items-center gap-2 rounded-xl">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 opacity-70">
-                      <path fillRule="evenodd" d="M10.5 3.75a6.75 6.75 0 1 0 4.217 12.042l4.745 4.746a.75.75 0 1 0 1.06-1.06l-4.746-4.746A6.75 6.75 0 0 0 10.5 3.75Zm-5.25 6.75a5.25 5.25 0 1 1 10.5 0 5.25 5.25 0 0 1-10.5 0Z" clipRule="evenodd" />
-                    </svg>
-                    <input
-                      type="text"
-                      value={search}
-                      onChange={(e) => setSearch(e.target.value)}
-                      className="grow"
-                      placeholder={user.role === 'admin' 
-                        ? "Nach Mitarbeiter-Anträgen suchen (Name, Datum, Status)" 
-                        : "Nach Anträgen suchen (Datum, Status, Bemerkung)"}
-                    />
-                  </label>
-                </div>
-                <UrlaubList
-                  urlaube={getFilteredUrlaube()}
-                onDelete={deleteUrlaub}
-                isAdmin={user.role === 'admin'}
-                />
-              </div>
+              </ComponentErrorBoundary>
             </div>
-          </div>
+          </RouteErrorBoundary>
         )}
 
         {/* Änderung: Prüfung-Tab-Inhalt hinzugefügt. Grund: Neue Prüfungsseite */}
         {activeTab === 'pruefung' && (
-          <div className="space-y-8">
-            <Pruefung />
-          </div>
+          <RouteErrorBoundary>
+            <div className="space-y-8">
+              <ComponentErrorBoundary name="Prüfungsübersicht">
+                <Pruefung />
+              </ComponentErrorBoundary>
+            </div>
+          </RouteErrorBoundary>
         )}
 
         {activeTab === 'mitarbeiter' && user.role === 'admin' && (
-          <div className="space-y-8">
-            <AdminMitarbeiterVerwaltung 
-              onClose={() => {}} 
-            />
-          </div>
+          <RouteErrorBoundary>
+            <div className="space-y-8">
+              <ComponentErrorBoundary name="Mitarbeiterverwaltung">
+                <AdminMitarbeiterVerwaltung 
+                  onClose={() => {}} 
+                />
+              </ComponentErrorBoundary>
+            </div>
+          </RouteErrorBoundary>
         )}
 
         {activeTab === 'settings' && user.role === 'admin' && (
-          <div className="space-y-8">
-            <Settings />
-          </div>
+          <RouteErrorBoundary>
+            <div className="space-y-8">
+              <ComponentErrorBoundary name="Einstellungen">
+                <Settings />
+              </ComponentErrorBoundary>
+            </div>
+          </RouteErrorBoundary>
         )}
       </main>
 
@@ -504,9 +529,11 @@ function AppContent() {
 
 function App() {
   return (
-    <YearProvider>
-      <AppContent />
-    </YearProvider>
+    <ErrorBoundary>
+      <YearProvider>
+        <AppContent />
+      </YearProvider>
+    </ErrorBoundary>
   )
 }
 
