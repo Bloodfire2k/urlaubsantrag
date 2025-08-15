@@ -12,6 +12,8 @@ Dieses Dokument beschreibt die durchgeführten Refactoring-Maßnahmen zur Verbes
 
 | `src/components/Pruefung.tsx` | 610/20 KB | - `src/types/vacation/index.ts` (30 Zeilen)<br>- `src/services/vacation/vacationService.ts` (100 Zeilen)<br>- `src/hooks/vacation/useVacationData.ts` (80 Zeilen)<br>- `src/hooks/vacation/useVacationCalendar.ts` (150 Zeilen)<br>- `src/components/vacation/Pruefung.tsx` (120 Zeilen)<br>- `src/components/vacation/VacationFilters.tsx` (80 Zeilen)<br>- `src/components/vacation/VacationCalendar.tsx` (200 Zeilen)<br>- `src/components/vacation/NoEmployeesFound.tsx` (30 Zeilen) | - Trennung von Datenladung und UI<br>- Wiederverwendbare Hooks<br>- Bessere Testbarkeit<br>- Reduzierte Komplexität | - Kalenderlogik in eigenem Hook<br>- API-Calls in Service<br>- Keine Änderung am Verhalten |
 
+| `src/components/AdminUrlaubsUebersichtInline.tsx` | 618/21 KB | - `src/types/admin/overview.ts` (40 Zeilen)<br>- `src/services/admin/overviewService.ts` (150 Zeilen)<br>- `src/hooks/admin/useOverviewData.ts` (120 Zeilen)<br>- `src/components/admin/overview/OverviewStats.tsx` (50 Zeilen)<br>- `src/components/admin/overview/OverviewFilters.tsx` (80 Zeilen)<br>- `src/components/admin/overview/EmployeeList.tsx` (150 Zeilen)<br>- `src/components/admin/overview/EmployeeDetails.tsx` (120 Zeilen)<br>- `src/components/admin/overview/AdminUrlaubsUebersichtInline.tsx` (80 Zeilen) | - Trennung von Statistik und UI<br>- Wiederverwendbare Komponenten<br>- Bessere Testbarkeit<br>- Reduzierte Komplexität | - Statistik-Logik in Service<br>- State-Management in Hook<br>- Keine Änderung am Verhalten |
+
 ## Nächste Schritte
 
 Die folgenden Dateien sind als nächstes für Refactoring vorgesehen:
