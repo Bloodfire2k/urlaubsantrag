@@ -6,10 +6,10 @@ import UrlaubForm from './components/UrlaubForm'
 import { UrlaubList } from './components/UrlaubList.tsx'
 import Stats from './components/Stats.tsx'
 import UrlaubBilanz from './components/UrlaubBilanz'
-import AdminMitarbeiterVerwaltung from './components/AdminMitarbeiterVerwaltung'
+import AdminMitarbeiterVerwaltung from './components/admin/user/UserList'
 import Settings from './components/Settings'
 import AdminUrlaubsUebersichtInline from './components/AdminUrlaubsUebersichtInline'
-import Pruefung from './components/Pruefung'
+import Pruefung from './components/vacation/Pruefung'
 import { Urlaub, UrlaubBudget, convertUrlaubFromBackend, convertUrlaubBudgetFromBackend } from './types/urlaub'
 
 // API-Basis-URL
@@ -17,9 +17,9 @@ import { Urlaub, UrlaubBudget, convertUrlaubFromBackend, convertUrlaubBudgetFrom
 const getApiBaseUrl = () => {
   const hostname = window.location.hostname
   if (hostname === 'localhost' || hostname === '127.0.0.1') {
-    return 'http://localhost:3001/api'
+    return 'http://localhost:3002/api' // Änderung: Port auf 3002 geändert. Grund: Backend läuft jetzt auf Port 3002
   } else {
-    return `http://${hostname}:3001/api`
+    return `http://${hostname}:3002/api`
   }
 }
 const API_BASE_URL = getApiBaseUrl()
