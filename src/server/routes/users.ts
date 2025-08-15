@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express'
 import jwt from 'jsonwebtoken'
+import bcrypt from 'bcryptjs' // Änderung: bcryptjs Import hinzugefügt. Grund: Passwort-Hashing für Reset-Funktion
 import { db } from '../database'
 
 const router = Router()
@@ -423,6 +424,85 @@ router.get('/stats/overview', authenticateToken, requireManagerOrAdmin, (req: Re
     console.error('Fehler beim Abrufen der Benutzer-Statistiken:', error)
     res.status(500).json({ 
       error: 'Interner Server-Fehler beim Abrufen der Benutzer-Statistiken' 
+    })
+  }
+})
+
+// Änderung: Passwort-Reset-Route hinzugefügt. Grund: Admin kann Mitarbeiter-Passwörter zurücksetzen
+// WICHTIG: Muss vor /:id Route stehen, da spezifischere Routen zuerst definiert werden müssen
+router.put('/:id/password', authenticateToken, requireAdmin, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params
+    const { password } = req.body
+
+    if (!password) {
+      return res.status(400).json({ error: 'Passwort ist erforderlich' })
+    }
+
+    // Benutzer existiert prüfen
+    const existingUser = db.get('SELECT * FROM users WHERE id = ?', [id])
+    if (!existingUser) {
+      return res.status(404).json({ error: 'Benutzer nicht gefunden' })
+    }
+
+    // Passwort hashen
+    const hashedPassword = await bcrypt.hash(password, 10)
+
+    // Passwort in Datenbank aktualisieren
+    db.run('UPDATE users SET password_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', 
+      [hashedPassword, id])
+
+    res.json({ 
+      success: true, 
+      message: 'Passwort erfolgreich aktualisiert',
+      newPassword: password // Für Admin-Anzeige
+    })
+
+  } catch (error) {
+    console.error('Fehler beim Passwort-Reset:', error)
+    res.status(500).json({ 
+      error: 'Interner Server-Fehler beim Passwort-Reset' 
+    })
+  }
+})
+
+// Änderung: Benutzer-Update-Route hinzugefügt. Grund: Admin kann Mitarbeiterdaten bearbeiten
+router.put('/:id', authenticateToken, requireAdmin, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params
+    const { fullName, email, role, market_id, department, is_active } = req.body
+
+    // Benutzer existiert prüfen
+    const existingUser = db.get('SELECT * FROM users WHERE id = ?', [id])
+    if (!existingUser) {
+      return res.status(404).json({ error: 'Benutzer nicht gefunden' })
+    }
+
+    // Benutzer aktualisieren
+    db.run(`UPDATE users SET 
+      full_name = ?, 
+      email = ?, 
+      role = ?, 
+      market_id = ?, 
+      department = ?, 
+      is_active = ?, 
+      updated_at = CURRENT_TIMESTAMP 
+      WHERE id = ?`, 
+      [fullName, email, role, market_id, department, is_active, id])
+
+    // Aktualisierten Benutzer zurückgeben
+    const updatedUser = db.get('SELECT * FROM users WHERE id = ?', [id])
+
+    res.json({ 
+      success: true, 
+      message: 'Benutzer erfolgreich aktualisiert',
+      user: updatedUser
+    })
+
+  } catch (error) {
+    console.error('Fehler beim Benutzer-Update:', error)
+    res.status(500).json({ 
+      error: 'Interner Server-Fehler beim Benutzer-Update' 
     })
   }
 })
