@@ -100,7 +100,7 @@ function AppContent() {
     try {
       setIsLoading(true)
       const token = localStorage.getItem('urlaub_token')
-      const response = await fetch(`${API_BASE_URL}/urlaub/budget/${user.id}?jahr=${selectedYear}`, {
+      const response = await fetch(`${API_BASE_URL}/urlaub/budget/all?jahr=${selectedYear}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -109,9 +109,9 @@ function AppContent() {
 
       if (response.ok) {
         const data = await response.json()
-        if (data.budget) {
-          const convertedBudget = convertUrlaubBudgetFromBackend(data.budget)
-          setBudgets([convertedBudget])
+        if (data.budgets) {
+          const convertedBudgets = data.budgets.map(convertUrlaubBudgetFromBackend)
+          setBudgets(convertedBudgets)
         }
       } else {
         console.error('Fehler beim Laden der Budgets:', response.statusText)

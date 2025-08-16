@@ -14,15 +14,15 @@
   {
     "id": 3,
     "username": "max.mustermann",
-    "email": "max@unternehmen.de",
+    "email": "max.mustermann@unternehmen.de",
     "fullName": "Max Mustermann",
     "password_hash": "$2a$12$jNzbALnZcFwqfiZZalig5O8JfuIxtKFoF80B0c/JE/JRFdG762ffW",
     "role": "employee",
     "market_id": 2,
-    "department": "Entwicklung",
+    "department": "Markt",
     "is_active": true,
     "created_at": "2025-08-13T12:08:16.217Z",
-    "updated_at": "2025-08-13T12:08:16.217Z"
+    "updated_at": "2025-08-15T10:59:07.838Z"
   },
   {
     "id": 4,
@@ -101,5 +101,31 @@
     "id": 9,
     "created_at": "2025-08-14T22:45:41.586Z",
     "updated_at": "2025-08-14T22:45:41.587Z"
+  },
+  {
+    "username": "kassen.kraft",
+    "email": "kassen.kraft@ecenter.de",
+    "fullName": "Kassen Kraft",
+    "password_hash": "$2a$12$mFE8s2ub4wTHBW0ScQt0s.SqRk9kcGCo0HmzToo17.EXtCXlQ94Me",
+    "role": "employee",
+    "market_id": 2,
+    "department": "Kasse",
+    "is_active": true,
+    "id": 10,
+    "created_at": "2025-08-15T10:32:07.250Z",
+    "updated_at": "2025-08-15T10:32:07.250Z"
+  },
+  {
+    "username": "bäckerei.user",
+    "email": "bäckerei.user@ecenter.de",
+    "fullName": "Bäckerei User",
+    "password_hash": "$2a$12$Ir6SMh.4kFvhH4jyhl2i8O1/Q0IE7ZgqCxvq0TUlPdTQixOe6Hr1G",
+    "role": "employee",
+    "market_id": 2,
+    "department": "Bäckerei",
+    "is_active": true,
+    "id": 11,
+    "created_at": "2025-08-15T10:51:40.955Z",
+    "updated_at": "2025-08-15T10:51:40.955Z"
   }
 ]

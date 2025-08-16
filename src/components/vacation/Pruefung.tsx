@@ -26,7 +26,7 @@ const Pruefung: React.FC = () => {
     hasVacationOnDay,
     navigateMonth,
     toggleEmployeeVisibility
-  } = useVacationCalendar(users, urlaube, selectedMarket, selectedDepartment)
+  } = useVacationCalendar(users, urlaube, selectedMarket, selectedDepartment, selectedYear)
 
   // Zeige Loading nur wenn wirklich geladen wird
   if (loading && token && user) {

@@ -40,6 +40,20 @@ const requireManagerOrAdmin = (req: Request, res: Response, next: any) => {
   next()
 }
 
+// Alle Abteilungen abrufen
+router.get('/departments', authenticateToken, (req: Request, res: Response) => {
+  try {
+    const departments = db.getAllDepartments()
+    res.json({
+      success: true,
+      departments
+    })
+  } catch (error) {
+    console.error('Fehler beim Abrufen der Abteilungen:', error)
+    res.status(500).json({ error: 'Interner Server-Fehler' })
+  }
+})
+
 // Alle Benutzer abrufen (gefiltert nach Rolle)
 router.get('/', authenticateToken, (req: Request, res: Response) => {
   try {

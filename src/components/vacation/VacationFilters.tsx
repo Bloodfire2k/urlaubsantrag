@@ -1,5 +1,5 @@
 import React from 'react'
-import { Market, DEPARTMENTS } from '../../types/vacation'
+import { Market } from '../../types/vacation'
 
 interface VacationFiltersProps {
   markets: Market[]
@@ -8,6 +8,8 @@ interface VacationFiltersProps {
   onMarketChange: (marketId: number | null) => void
   onDepartmentChange: (department: string) => void
 }
+
+const DEPARTMENTS = ['Markt', 'Bäckerei', 'Metzgerei', 'Kasse'] as const
 
 export const VacationFilters: React.FC<VacationFiltersProps> = ({
   markets,
@@ -67,6 +69,8 @@ export const VacationFilters: React.FC<VacationFiltersProps> = ({
             </select>
           </div>
         </div>
+
+
       </div>
     </div>
   )

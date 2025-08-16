@@ -65,6 +65,12 @@ const UrlaubForm: React.FC<UrlaubFormProps> = ({ onSubmit, existingUrlaube = [] 
       return
     }
 
+    // Prüfe ob das Jahr korrekt ist
+    if (startDate.getFullYear() !== selectedYear || endDate.getFullYear() !== selectedYear) {
+      alert(`Urlaub kann nur für das ausgewählte Jahr ${selectedYear} beantragt werden.`)
+      return
+    }
+
     // Überlappungsprüfung
     const overlapMessage = checkForOverlap(startDatum, endDatum)
     if (overlapMessage) {
@@ -127,6 +133,7 @@ const UrlaubForm: React.FC<UrlaubFormProps> = ({ onSubmit, existingUrlaube = [] 
                 max={`${selectedYear}-12-31`}
                 required
                 className="grow bg-transparent"
+                defaultValue={`${selectedYear}-01-01`}
               />
             </label>
           </div>

@@ -1,5 +1,6 @@
 import React from 'react'
 import { useYear } from '../../../contexts/YearContext'
+import { useAuth } from '../../../contexts/AuthContext'
 import { useOverviewData } from '../../../hooks/admin/useOverviewData'
 import { calculateWorkingDays } from '../../../utils/vacationCalculator'
 import { OverviewStats } from './OverviewStats'
@@ -14,6 +15,7 @@ interface Props {
 
 const AdminUrlaubsUebersichtInline: React.FC<Props> = ({ allUrlaube }) => {
   const { selectedYear } = useYear()
+  const { getToken } = useAuth()
   const {
     budgets,
     mitarbeiterStats,
@@ -29,7 +31,7 @@ const AdminUrlaubsUebersichtInline: React.FC<Props> = ({ allUrlaube }) => {
     getFilteredMitarbeiterStats,
     getUrlaubsStatus,
     formatDate
-  } = useOverviewData(allUrlaube, selectedYear)
+  } = useOverviewData(allUrlaube, selectedYear, getToken())
 
   if (loading) {
     return (

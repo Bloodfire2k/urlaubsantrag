@@ -16,8 +16,20 @@ export const YearProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Jahr beim Start laden (für alle Benutzer)
   useEffect(() => {
     const savedYear = localStorage.getItem('global_vacation_year')
+    const currentYear = new Date().getFullYear()
+    
     if (savedYear) {
-      setSelectedYear(parseInt(savedYear))
+      const parsedYear = parseInt(savedYear)
+      // Prüfe ob das gespeicherte Jahr in der Zukunft liegt
+      if (parsedYear > currentYear + 1) {
+        // Setze auf aktuelles Jahr zurück
+        handleSetSelectedYear(currentYear)
+      } else {
+        setSelectedYear(parsedYear)
+      }
+    } else {
+      // Wenn kein Jahr gespeichert ist, das aktuelle Jahr speichern
+      handleSetSelectedYear(currentYear)
     }
   }, [])
 

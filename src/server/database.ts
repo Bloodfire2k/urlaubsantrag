@@ -430,22 +430,71 @@ export class DatabaseManager {
     return this.users.filter(u => u.market_id === marketId)
   }
 
+  getAllUsers(): User[] {
+    return this.users
+  }
+
+  getAllDepartments(): string[] {
+    // Hole alle einzigartigen Abteilungen aus den Benutzern
+    const departments = new Set(this.users.map(user => user.department).filter(Boolean))
+    return Array.from(departments).sort()
+  }
+
   getMarketById(id: number): Market | undefined {
     return this.markets.find(m => m.id === id)
   }
 
   addUrlaubBudget(budget: Omit<UrlaubBudget, 'id'>): UrlaubBudget {
+    // Prüfe ob bereits ein Budget für diesen Mitarbeiter und dieses Jahr existiert
+    const existingBudget = this.urlaubBudgets.find(b => 
+      b.mitarbeiterId === budget.mitarbeiterId && 
+      b.jahr === budget.jahr
+    )
+    
+    if (existingBudget) {
+      return existingBudget
+    }
+
+    // Erstelle neues Budget
     const newBudget: UrlaubBudget = {
       ...budget,
       id: this.nextIds.urlaubBudgets++
     }
+    
+    // Füge das Budget hinzu und speichere
     this.urlaubBudgets.push(newBudget)
-    this.saveAllData()
+    this.saveTable('urlaub_budgets', this.urlaubBudgets)
+    
+    console.log(`✅ Neues Budget erstellt für Mitarbeiter ${budget.mitarbeiterId} Jahr ${budget.jahr}`)
     return newBudget
   }
 
   getUrlaubBudget(userId: number, jahr: number): UrlaubBudget | undefined {
+    // Suche zuerst das Budget für das angeforderte Jahr
     let budget = this.urlaubBudgets.find(b => b.mitarbeiterId === userId && b.jahr === jahr)
+    
+    // Wenn kein Budget gefunden wurde, erstelle ein neues basierend auf dem Vorjahresbudget
+    if (!budget) {
+      const vorjahresBudget = this.urlaubBudgets.find(b => b.mitarbeiterId === userId && b.jahr === jahr - 1)
+      
+      // Erstelle neues Budget basierend auf Vorjahresbudget oder Standardwerten
+      const newBudget = {
+        mitarbeiterId: userId,
+        jahr: jahr,
+        jahresanspruch: vorjahresBudget?.jahresanspruch || 30, // Standard: 30 Tage
+        genommen: 0,
+        verplant: 0,
+        uebertrag: 0,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }
+      
+      // Budget zur Datenbank hinzufügen
+      budget = this.addUrlaubBudget(newBudget)
+      
+      // Speichere die Änderungen sofort
+      this.saveAllData()
+    }
     
     if (budget) {
       // Verplante Tage neu berechnen basierend auf ausstehenden Anträgen

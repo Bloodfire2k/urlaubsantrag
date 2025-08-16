@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Urlaub, UrlaubBudget, MitarbeiterStats, GlobalStats, StatusCounts } from '../../types/admin/overview'
 import { overviewService } from '../../services/admin/overviewService'
 
-export const useOverviewData = (allUrlaube: Urlaub[], selectedYear: number) => {
+export const useOverviewData = (allUrlaube: Urlaub[], selectedYear: number, token?: string) => {
   const [budgets, setBudgets] = useState<UrlaubBudget[]>([])
   const [mitarbeiterStats, setMitarbeiterStats] = useState<MitarbeiterStats[]>([])
   const [globalStats, setGlobalStats] = useState<GlobalStats>({ zuVerplanen: 0, verplant: 0, offen: 0 })
@@ -13,11 +13,24 @@ export const useOverviewData = (allUrlaube: Urlaub[], selectedYear: number) => {
 
   // Budgets laden
   useEffect(() => {
-    setLoading(true)
-    const loadedBudgets = overviewService.loadBudgets(selectedYear)
-    setBudgets(loadedBudgets)
-    setLoading(false)
-  }, [selectedYear])
+    const loadBudgets = async () => {
+      setLoading(true)
+      try {
+        const loadedBudgets = await overviewService.loadBudgets(selectedYear, token)
+        setBudgets(loadedBudgets)
+      } catch (error) {
+        console.error('Fehler beim Laden der Budgets:', error)
+        // Zeige Fehlermeldung im UI
+        if (error instanceof Error) {
+          // TODO: Fehlerbehandlung im UI implementieren
+          console.error('Fehler:', error.message)
+        }
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadBudgets()
+  }, [selectedYear, token])
 
   // Statistiken berechnen
   useEffect(() => {

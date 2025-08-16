@@ -2,6 +2,7 @@ import React from 'react'
 import { Calendar, Settings as SettingsIcon, Clock, Globe } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useYear } from '../contexts/YearContext'
+import { VacationPeriods } from './admin/settings/VacationPeriods'
 
 const Settings: React.FC = () => {
   const { user } = useAuth()
@@ -67,7 +68,8 @@ const Settings: React.FC = () => {
                   className="select select-bordered w-full max-w-xs bg-white"
                 >
                   {Array.from({length: 10}, (_, i) => {
-                    const year = new Date().getFullYear() + i - 2
+                    // Zeige die nächsten 10 Jahre an, beginnend mit dem aktuellen Jahr
+                    const year = new Date().getFullYear() + i
                     return (
                       <option key={year} value={year}>{year}</option>
                     )
@@ -189,6 +191,9 @@ const Settings: React.FC = () => {
               </div>
             </div>
           </div>
+
+          {/* Ferienzeiten */}
+          <VacationPeriods year={selectedYear} />
         </div>
 
         {/* Info Box */}

@@ -5,22 +5,45 @@ export const useVacationCalendar = (
   users: User[],
   urlaube: Urlaub[],
   selectedMarket: number | null,
-  selectedDepartment: string
+  selectedDepartment: string,
+  selectedYear?: number
 ) => {
-  const [currentMonth, setCurrentMonth] = useState(new Date())
+  // Starte immer im Januar des ausgewählten Jahres
+  const [currentMonth, setCurrentMonth] = useState(() => {
+    const date = new Date()
+    date.setFullYear(selectedYear || date.getFullYear())
+    date.setMonth(0) // Januar
+    date.setDate(1)  // Erster Tag des Monats
+    return date
+  })
   const [visibleEmployees, setVisibleEmployees] = useState<Set<number>>(new Set())
 
-  // Gefilterte Mitarbeiter basierend auf Markt und Abteilung
-  const filteredEmployees = useMemo(() => 
-    users.filter(user => 
-      selectedMarket && user.market_id === selectedMarket &&
-      selectedDepartment && user.department === selectedDepartment
-    ), [users, selectedMarket, selectedDepartment]
-  )
+  // Gefilterte Mitarbeiter basierend auf Markt und verfügbaren Abteilungen
+  const filteredEmployees = useMemo(() => {
+    if (!selectedMarket) return []
+
+    // Definiere welche Abteilungen zusammen angezeigt werden sollen
+    const departmentGroups: { [key: string]: string[] } = {
+      'Kasse': ['Kasse', 'Markt', 'Bäckerei'],
+      'Markt': ['Markt', 'Kasse', 'Bäckerei'],
+      'Bäckerei': ['Bäckerei', 'Markt', 'Kasse'],
+      'Metzgerei': ['Metzgerei'] // Metzgerei bleibt alleine
+    }
+
+    // Hole die relevanten Abteilungen für die ausgewählte Abteilung
+    const relevantDepartments = selectedDepartment ? 
+      (departmentGroups[selectedDepartment] || [selectedDepartment]) : 
+      []
+
+    return users.filter(user => 
+      user.market_id === selectedMarket &&
+      (!selectedDepartment || relevantDepartments.includes(user.department))
+    )
+  }, [users, selectedMarket, selectedDepartment])
 
   // Gefilterte Urlaubsanträge
   const filteredUrlaube = useMemo(() => {
-    if (!selectedMarket || !selectedDepartment || filteredEmployees.length === 0) {
+    if (!selectedMarket || filteredEmployees.length === 0) {
       return []
     }
     
@@ -28,7 +51,7 @@ export const useVacationCalendar = (
     return urlaube.filter(urlaubsantrag => 
       filteredEmployeeIds.includes(urlaubsantrag.mitarbeiterId)
     )
-  }, [urlaube, filteredEmployees, selectedMarket, selectedDepartment])
+  }, [urlaube, filteredEmployees, selectedMarket])
 
   // Urlaubstage-Map für gefilterte Mitarbeiter
   const vacationDaysMap = useMemo(() => {
@@ -130,14 +153,18 @@ export const useVacationCalendar = (
     setVisibleEmployees(newVisible)
   }
 
-  // Alle gefilterten Mitarbeiter standardmäßig sichtbar machen
+  // Nur Mitarbeiter der ausgewählten Abteilung standardmäßig sichtbar machen
   useMemo(() => {
-    if (filteredEmployees.length > 0) {
-      setVisibleEmployees(new Set(filteredEmployees.map(emp => emp.id)))
+    if (filteredEmployees.length > 0 && selectedDepartment) {
+      // Nur Mitarbeiter der ausgewählten Abteilung vorauswählen
+      const selectedDeptEmployees = filteredEmployees
+        .filter(emp => emp.department === selectedDepartment)
+        .map(emp => emp.id)
+      setVisibleEmployees(new Set(selectedDeptEmployees))
     } else {
       setVisibleEmployees(new Set())
     }
-  }, [filteredEmployees])
+  }, [filteredEmployees, selectedDepartment])
 
   return {
     currentMonth,

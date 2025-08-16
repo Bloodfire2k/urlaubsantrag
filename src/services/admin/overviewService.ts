@@ -15,73 +15,45 @@ const API_BASE_URL = getApiBaseUrl()
 
 export const overviewService = {
   // Budgets laden
-  loadBudgets(selectedYear: number): UrlaubBudget[] {
-    // Erstelle echte Mitarbeiter basierend auf Ihrem System
-    return [
-      {
-        mitarbeiterId: 2,
-        mitarbeiterName: 'Unternehmer Admin',
-        jahr: selectedYear,
-        jahresanspruch: 36,
-        genommen: 0,
-        verplant: 0,
-        uebertrag: 0
-      },
-      {
-        mitarbeiterId: 3,
-        mitarbeiterName: 'Max Mustermann',
-        jahr: selectedYear,
-        jahresanspruch: 36,
-        genommen: 0,
-        verplant: 0,
-        uebertrag: 0
-      },
-      {
-        mitarbeiterId: 4,
-        mitarbeiterName: 'Anna Schmidt',
-        jahr: selectedYear,
-        jahresanspruch: 36,
-        genommen: 0,
-        verplant: 0,
-        uebertrag: 0
-      },
-      {
-        mitarbeiterId: 5,
-        mitarbeiterName: 'Markt Manager 1',
-        jahr: selectedYear,
-        jahresanspruch: 36,
-        genommen: 0,
-        verplant: 0,
-        uebertrag: 0
-      },
-      {
-        mitarbeiterId: 6,
-        mitarbeiterName: 'Markt Manager 2',
-        jahr: selectedYear,
-        jahresanspruch: 36,
-        genommen: 0,
-        verplant: 0,
-        uebertrag: 0
-      },
-      {
-        mitarbeiterId: 7,
-        mitarbeiterName: 'Susanne Asel',
-        jahr: selectedYear,
-        jahresanspruch: 36,
-        genommen: 0,
-        verplant: 0,
-        uebertrag: 0
-      },
-      {
-        mitarbeiterId: 8,
-        mitarbeiterName: 'test user',
-        jahr: selectedYear,
-        jahresanspruch: 36,
-        genommen: 0,
-        verplant: 0,
-        uebertrag: 0
+  async loadBudgets(selectedYear: number, token?: string): Promise<UrlaubBudget[]> {
+    try {
+      let authToken = token
+      if (!authToken) {
+        // Fallback: Token aus dem localStorage holen
+        const storedToken = localStorage.getItem('urlaub_token')
+        if (!storedToken) {
+          throw new Error('Nicht eingeloggt')
+        }
+        authToken = storedToken
       }
-    ]
+
+      const response = await fetch(`${API_BASE_URL}/urlaub/budget/all?jahr=${selectedYear}`, {
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (response.status === 401 || response.status === 403) {
+        // Bei Authentifizierungsproblemen zum Login weiterleiten
+        window.location.href = '/login'
+        throw new Error('Nicht autorisiert')
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.message || 'Fehler beim Laden der Budgets')
+      }
+
+      const data = await response.json()
+      return data.budgets || []
+    } catch (error) {
+      console.error('Fehler beim Laden der Budgets:', error)
+      if (error instanceof Error && error.message === 'Nicht autorisiert') {
+        return []
+      }
+      throw error
+    }
   },
 
   // Statistiken berechnen

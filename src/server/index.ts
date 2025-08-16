@@ -15,10 +15,13 @@ const app = createApp()
 setupGracefulShutdown()
 
 // Server starten
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server läuft auf Port ${PORT}`)
   console.log(`📊 Datenbank: ${db.isConnected() ? 'Verbunden' : 'Nicht verbunden'}`)
-  console.log(`🔐 API verfügbar unter: http://localhost:${PORT}/api`)
+  console.log(`🔐 API verfügbar unter:`)
+  console.log(`   - Lokal: http://localhost:${PORT}/api`)
+  console.log(`   - Netzwerk: http://192.168.50.212:${PORT}/api`)
+  console.log(`   - Netzwerk: http://10.5.0.2:${PORT}/api`)
 })
 
 export { app, db }
