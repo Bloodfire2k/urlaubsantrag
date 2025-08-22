@@ -120,7 +120,7 @@ process.on('SIGTERM', async () => {
 })
 
 // Server starten
-app.listen(PORT, async () => {
+app.listen(Number(PORT), '0.0.0.0', async () => {
   console.log(`🚀 Production Server läuft auf Port ${PORT}`)
   console.log(`🌍 Umgebung: ${process.env.NODE_ENV}`)
   console.log(`💾 Datenbank: JSON-DB`)

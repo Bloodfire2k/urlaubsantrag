@@ -86,7 +86,7 @@ ENV NODE_ENV=production
 ENV PORT=3000
 
 # Port exposieren
-EXPOSE 3000
+EXPOSE 3001
 
 # Änderung: Health Check mit wget (Alpine-kompatibel)
 # Grund: curl ist nicht standardmäßig in Alpine verfügbar

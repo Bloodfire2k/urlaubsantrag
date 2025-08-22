@@ -12,8 +12,7 @@ services:
       DATABASE_URL: file:/app/data/production.db
       JWT_SECRET: your-super-secret-jwt-key-2024-production
       DB_TYPE: sqlite
-    ports:
-      - "3001:3000"
+      PORT: "3001"
     volumes:
       - sqlite_data:/app/data
 
