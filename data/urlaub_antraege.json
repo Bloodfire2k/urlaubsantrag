@@ -254,12 +254,12 @@
     "startDatum": "2026-01-01",
     "endDatum": "2026-01-17",
     "bemerkung": "",
-    "status": "pending",
+    "status": "approved",
     "id": 33,
     "created_at": "2025-08-21T15:40:07.795Z",
-    "updated_at": "2025-08-22T14:53:58.044Z",
-    "genehmigt_von": null,
-    "genehmigt_am": null
+    "updated_at": "2025-08-22T15:52:54.930Z",
+    "genehmigt_von": 2,
+    "genehmigt_am": "2025-08-22T15:52:54.930Z"
   },
   {
     "mitarbeiterId": 7,
