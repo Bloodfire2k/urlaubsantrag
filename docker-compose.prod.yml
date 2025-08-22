@@ -11,7 +11,7 @@ services:
       NODE_ENV: production
       DATABASE_URL: ${DATABASE_URL:-file:/app/data/production.db}
       JWT_SECRET: ${JWT_SECRET}
-      PORT: ${PORT:-3000}
+      # PORT: ${PORT:-3000}
       # Datenbank-Typ auswählen
       DB_TYPE: ${DB_TYPE:-sqlite}
       # Für PostgreSQL/MySQL
@@ -21,7 +21,7 @@ services:
       DB_PASSWORD: ${DB_PASSWORD}
       DB_NAME: ${DB_NAME}
       ports:
-        - "${PORT:-3000}:3000"
+        - "3000:3000"
     volumes:
       # SQLite-Datenbank persistent speichern
       - sqlite_data:/app/data
