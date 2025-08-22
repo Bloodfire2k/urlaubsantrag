@@ -11,7 +11,7 @@ services:
     environment:
       NODE_ENV: production
       DATABASE_URL: file:/app/data/production.db
-      JWT_SECRET: your-super-secret-jwt-key-2024-production
+      JWT_SECRET: ihr-super-geheimer-jwt-schluessel-2024
       DB_TYPE: sqlite
       PORT: "3001"
       ALLOWED_ORIGIN: "https://urlaub.myfire.cloud"
