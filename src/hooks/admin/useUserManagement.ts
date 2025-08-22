@@ -227,7 +227,7 @@ export const useUserManagement = () => {
       // Urlaubsbudget aktualisieren wenn sich der Anspruch geändert hat
       try {
         console.log('Aktualisiere Budget für User:', editingUser.id, 'auf', userForm.urlaubsanspruch, 'Tage')
-        const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3001' : `http://${window.location.hostname}:3001`
+        const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3001' : `https://${window.location.hostname}:3001`
         const response = await fetch(`${apiUrl}/api/urlaub/budget/${editingUser.id}/${selectedYear}`, {
           method: 'PUT',
           headers: {

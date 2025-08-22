@@ -111,7 +111,7 @@ export const useOverviewData = (allUrlaube: Urlaub[], selectedYear: number, sele
     try {
       console.log('Sende Status-Update:', { urlaubId, newStatus })
       
-              const response = await fetch(`http://localhost:3001/api/urlaub/${urlaubId}/status`, {
+              const response = await fetch(`https://localhost:3001/api/urlaub/${urlaubId}/status`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
