@@ -88,10 +88,8 @@ ENV PORT=3000
 # Port exposieren
 EXPOSE 3001
 
-# Änderung: Health Check mit wget (Alpine-kompatibel)
-# Grund: curl ist nicht standardmäßig in Alpine verfügbar
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1
+# Health Check mit wget (Alpine-kompatibel)
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s CMD wget -qO- http://127.0.0.1:3001/health || exit 1
 
 # Änderung: dumb-init für besseres Signal Handling in Containern
 # Grund: Verhindert Zombie-Prozesse und ermöglicht graceful shutdown
