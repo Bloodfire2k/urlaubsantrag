@@ -94,9 +94,9 @@ const LoginForm: React.FC = () => {
       <div className="mt-6 p-4 bg-slate-50 rounded-xl text-sm">
         <h4 className="mb-3 text-slate-700 font-semibold">Demo-Zugangsdaten:</h4>
         <div className="grid gap-1">
-                                     <div><strong>Admin:</strong> username: <code>admin</code>, password: <code>admin123</code></div>
-         <div><strong>Mitarbeiter:</strong> username: <code>max.mustermann</code>, password: <code>max123</code></div>
-         <div><strong>Mitarbeiterin:</strong> username: <code>anna.schmidt</code>, password: <code>anna123</code></div>
+                                                                           <div><strong>Admin:</strong> username: <code>admin</code>, password: <code>admin</code></div>
+          <div><strong>Mitarbeiter:</strong> username: <code>max.mustermann</code>, password: <code>max</code></div>
+          <div><strong>Mitarbeiterin:</strong> username: <code>anna.schmidt</code>, password: <code>anna</code></div>
         </div>
       </div>
       </div>
