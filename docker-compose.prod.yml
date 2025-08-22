@@ -9,23 +9,13 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      DATABASE_URL: ${DATABASE_URL:-file:/app/data/production.db}
-      JWT_SECRET: ${JWT_SECRET}
-      # PORT: ${PORT:-3000}
-      # Datenbank-Typ auswählen
-      DB_TYPE: ${DB_TYPE:-sqlite}
-      # Für PostgreSQL/MySQL
-      DB_HOST: ${DB_HOST}
-      DB_PORT: ${DB_PORT}
-      DB_USER: ${DB_USER}
-      DB_PASSWORD: ${DB_PASSWORD}
-      DB_NAME: ${DB_NAME}
-      ports:
-        - "3000:3000"
+      DATABASE_URL: file:/app/data/production.db
+      JWT_SECRET: your-super-secret-jwt-key-2024-production
+      DB_TYPE: sqlite
+    ports:
+      - "3000:3000"
     volumes:
-      # SQLite-Datenbank persistent speichern
       - sqlite_data:/app/data
-    # Healthcheck entfernt - verursachte YAML-Fehler
 
 volumes:
   sqlite_data:
