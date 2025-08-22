@@ -155,38 +155,28 @@ export class DatabaseManager {
         return
       }
 
-      console.log('🌱 Fülle Datenbank mit Initial-Daten...')
+      console.log('🌱 Erstelle saubere Datenbank mit Admin-Benutzer...')
 
-      // Erstelle Demo-Märkte
+      // Erstelle einen einfachen Markt
       const market1: Market = {
         id: this.nextIds.markets++,
-        name: 'E-Center',
+        name: 'Hauptmarkt',
         address: 'Musterstraße 1, 12345 Musterstadt',
         phone: '+49 123 456789',
-        email: 'info@ecenter.de',
+        email: 'info@unternehmen.de',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       }
 
-      const market2: Market = {
-        id: this.nextIds.markets++,
-        name: 'Edeka',
-        address: 'Beispielweg 15, 54321 Beispielstadt',
-        phone: '+49 987 654321',
-        email: 'info@edeka.de',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }
+      this.markets.push(market1)
 
-      this.markets.push(market1, market2)
-
-      // Erstelle Admin-Benutzer
-      const adminPasswordHash = await password.hash('admin123', 12)
+      // Erstelle nur einen Admin-Benutzer mit Passwort '123'
+      const adminPasswordHash = await password.hash('123', 12)
       const admin: User = {
         id: this.nextIds.users++,
         username: 'admin',
         email: 'admin@unternehmen.de',
-        fullName: 'Unternehmer Admin',
+        fullName: 'Administrator',
         password_hash: adminPasswordHash,
         role: 'admin',
         market_id: market1.id,
@@ -195,86 +185,14 @@ export class DatabaseManager {
         updated_at: new Date().toISOString()
       }
 
-      // Erstelle Demo-Mitarbeiter (Passwörter gemäß Login-Hinweis)
-              const maxPasswordHash = await password.hash('max123', 12)
-        const annaPasswordHash = await password.hash('anna123', 12)
-        const employeePasswordHash = await password.hash('demo123', 12) // für Manager-Demos
-      const max: User = {
-        id: this.nextIds.users++,
-        username: 'max.mustermann',
-        email: 'max@unternehmen.de',
-        fullName: 'Max Mustermann',
-        password_hash: maxPasswordHash,
-        role: 'employee',
-        market_id: market1.id,
-        department: 'Entwicklung',
-        is_active: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }
+      this.users.push(admin)
 
-      const anna: User = {
-        id: this.nextIds.users++,
-        username: 'anna.schmidt',
-        email: 'anna@unternehmen.de',
-        fullName: 'Anna Schmidt',
-        password_hash: annaPasswordHash,
-        role: 'employee',
-        market_id: market2.id,
-        department: 'Marketing',
-        is_active: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }
-
-      const manager1: User = {
-        id: this.nextIds.users++,
-        username: 'manager1',
-        email: 'manager1@unternehmen.de',
-        fullName: 'Markt Manager 1',
-        password_hash: employeePasswordHash,
-        role: 'manager',
-        market_id: market1.id,
-        department: 'Geschäftsführung',
-        is_active: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }
-
-      const manager2: User = {
-        id: this.nextIds.users++,
-        username: 'manager2',
-        email: 'manager2@unternehmen.de',
-        fullName: 'Markt Manager 2',
-        password_hash: employeePasswordHash,
-        role: 'manager',
-        market_id: market2.id,
-        department: 'Geschäftsführung',
-        is_active: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }
-
-      this.users.push(admin, max, anna, manager1, manager2)
-
-      // Erstelle Urlaubsbudgets für 2025 (aktuelles Jahr)
+      // Erstelle ein Urlaubsbudget für den Admin
       const budget1: UrlaubBudget = {
         id: this.nextIds.urlaubBudgets++,
         mitarbeiterId: admin.id,
         jahr: 2025,
         jahresanspruch: 30,
-        genommen: 15,
-        verplant: 0,
-        uebertrag: 0,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }
-
-      const budget2: UrlaubBudget = {
-        id: this.nextIds.urlaubBudgets++,
-        mitarbeiterId: max.id,
-        jahr: 2025,
-        jahresanspruch: 25,
         genommen: 0,
         verplant: 0,
         uebertrag: 0,
@@ -282,48 +200,12 @@ export class DatabaseManager {
         updated_at: new Date().toISOString()
       }
 
-      const budget3: UrlaubBudget = {
-        id: this.nextIds.urlaubBudgets++,
-        mitarbeiterId: anna.id,
-        jahr: 2025,
-        jahresanspruch: 25,
-        genommen: 0,
-        verplant: 0,
-        uebertrag: 0,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }
-
-      const budget4: UrlaubBudget = {
-        id: this.nextIds.urlaubBudgets++,
-        mitarbeiterId: manager1.id,
-        jahr: 2025,
-        jahresanspruch: 28,
-        genommen: 0,
-        verplant: 0,
-        uebertrag: 0,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }
-
-      const budget5: UrlaubBudget = {
-        id: this.nextIds.urlaubBudgets++,
-        mitarbeiterId: manager2.id,
-        jahr: 2025,
-        jahresanspruch: 28,
-        genommen: 0,
-        verplant: 0,
-        uebertrag: 0,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }
-
-      this.urlaubBudgets.push(budget1, budget2, budget3, budget4, budget5)
+      this.urlaubBudgets.push(budget1)
 
       // Speichere alle Daten
       this.saveAllData()
 
-      console.log('✅ Initial-Daten erfolgreich eingefügt')
+      console.log('✅ Saubere Datenbank mit Admin-Benutzer erstellt')
     } catch (error) {
       console.error('❌ Fehler beim Einfügen der Initial-Daten:', error)
     }

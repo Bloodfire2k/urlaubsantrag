@@ -91,15 +91,12 @@ const LoginForm: React.FC = () => {
           {isLoading ? 'Anmeldung läuft...' : 'Anmelden'}
         </Button>
       </form>
-      <div className="mt-6 p-4 bg-slate-50 rounded-xl text-sm">
-        <h4 className="mb-3 text-slate-700 font-semibold">Demo-Zugangsdaten:</h4>
-        <div className="grid gap-1">
-                                                                                                                                                                                                                                                                                                               <div><strong>Test-Admin:</strong> username: <code>testadmin</code>, password: <code>123</code></div>
-            <div><strong>Admin:</strong> username: <code>admin</code>, password: <code>123</code></div>
-            <div><strong>Mitarbeiter:</strong> username: <code>max.mustermann</code>, password: <code>123</code></div>
-            <div><strong>Mitarbeiterin:</strong> username: <code>anna.schmidt</code>, password: <code>123</code></div>
-        </div>
-      </div>
+               <div className="mt-6 p-4 bg-slate-50 rounded-xl text-sm">
+           <h4 className="mb-3 text-slate-700 font-semibold">Admin-Zugangsdaten:</h4>
+           <div className="grid gap-1">
+             <div><strong>Administrator:</strong> username: <code>admin</code>, password: <code>123</code></div>
+           </div>
+         </div>
       </div>
     </div>
   )
