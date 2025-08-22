@@ -94,10 +94,10 @@ const LoginForm: React.FC = () => {
       <div className="mt-6 p-4 bg-slate-50 rounded-xl text-sm">
         <h4 className="mb-3 text-slate-700 font-semibold">Demo-Zugangsdaten:</h4>
         <div className="grid gap-1">
-                                                                           <div><strong>Test-Admin:</strong> username: <code>testadmin</code>, password: <code>test</code></div>
-          <div><strong>Admin:</strong> username: <code>admin</code>, password: <code>admin</code></div>
-          <div><strong>Mitarbeiter:</strong> username: <code>max.mustermann</code>, password: <code>max</code></div>
-          <div><strong>Mitarbeiterin:</strong> username: <code>anna.schmidt</code>, password: <code>anna</code></div>
+                                                                                                                                                       <div><strong>Test-Admin:</strong> username: <code>testadmin</code>, password: <code>test</code></div>
+           <div><strong>Admin:</strong> username: <code>admin</code>, password: <code>test</code></div>
+           <div><strong>Mitarbeiter:</strong> username: <code>max.mustermann</code>, password: <code>test</code></div>
+           <div><strong>Mitarbeiterin:</strong> username: <code>anna.schmidt</code>, password: <code>test</code></div>
         </div>
       </div>
       </div>
