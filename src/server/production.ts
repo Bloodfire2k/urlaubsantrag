@@ -9,13 +9,13 @@ import cors from 'cors'
 import helmet from 'helmet'
 import rateLimit from 'express-rate-limit'
 import path from 'path'
-// import { prisma } from '../lib/prisma'
+import { prisma } from '../lib/prisma'
 
 // Routen importieren
 import { authRoutes } from './routes/auth'
-import { usersRoutes } from './routes/users'
-import { urlaubRoutes } from './routes/urlaub'
-import { marketsRoutes } from './routes/markets'
+import { usersPrismaRoutes } from './routes/users-prisma'
+import { urlaubPrismaRoutes } from './routes/urlaub-prisma'
+import { marketsPrismaRoutes } from './routes/markets-prisma'
 
 const app = express()
 const PORT = process.env.PORT || 3000
@@ -58,10 +58,12 @@ app.use(express.static(path.join(__dirname, '../../dist')))
 // Datenbank-Initialisierung
 async function initDatabase() {
   try {
-    console.log('✅ JSON-Datenbank wird initialisiert...')
+    await prisma.$connect()
+    console.log('✅ SQLite-Datenbankverbindung erfolgreich')
     
-    // JSON-DB ist bereits verfügbar
-    console.log('✅ JSON-Datenbank bereit')
+    // Teste Verbindung
+    await prisma.$queryRaw`SELECT 1`
+    console.log('✅ Datenbankverbindung getestet')
     
   } catch (error) {
     console.error('❌ Datenbankverbindungsfehler:', error)
@@ -69,27 +71,28 @@ async function initDatabase() {
   }
 }
 
-// API Routes - JSON-basierte Endpunkte
+// API Routes - Prisma-basierte Endpunkte
 app.use('/api/auth', authRoutes)
-app.use('/api/users', usersRoutes)
-app.use('/api/urlaub', urlaubRoutes) 
-app.use('/api/markets', marketsRoutes)
+app.use('/api/users', usersPrismaRoutes)
+app.use('/api/urlaub', urlaubPrismaRoutes) 
+app.use('/api/markets', marketsPrismaRoutes)
 
-// Health Check
+// Health Check mit Datenbankstatus
 app.get('/api/health', async (req, res) => {
   try {
+    await prisma.$queryRaw`SELECT 1`
     res.json({ 
       status: 'OK', 
       timestamp: new Date().toISOString(),
-      database: 'JSON-DB ready',
+      database: 'connected (SQLite)',
       version: process.env.npm_package_version || '1.0.0'
     })
   } catch (error) {
     res.status(500).json({ 
       status: 'ERROR', 
       timestamp: new Date().toISOString(),
-      database: 'error',
-      error: 'Server-Fehler' 
+      database: 'disconnected',
+      error: 'Datenbankverbindung fehlgeschlagen' 
     })
   }
 })
@@ -111,11 +114,13 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 // Graceful Shutdown
 process.on('SIGINT', async () => {
   console.log('\n🔄 Server wird heruntergefahren...')
+  await prisma.$disconnect()
   process.exit(0)
 })
 
 process.on('SIGTERM', async () => {
   console.log('\n🔄 Server wird heruntergefahren...')
+  await prisma.$disconnect()
   process.exit(0)
 })
 
@@ -123,11 +128,11 @@ process.on('SIGTERM', async () => {
 app.listen(PORT, async () => {
   console.log(`🚀 Production Server läuft auf Port ${PORT}`)
   console.log(`🌍 Umgebung: ${process.env.NODE_ENV}`)
-  console.log(`💾 Datenbank: JSON-DB`)
+  console.log(`💾 Datenbank: SQLite`)
   
   await initDatabase()
   
   console.log(`✅ Urlaubsantrag-System bereit!`)
 })
 
-export { app }
+export { app, prisma }
