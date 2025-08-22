@@ -11,6 +11,9 @@ import rateLimit from 'express-rate-limit'
 import path from 'path'
 // import { prisma } from '../lib/prisma'
 
+// Bootstrap imports
+import { resetJsonDbIfNeeded, seedAdminIfNeeded } from './bootstrap-json'
+
 // Routen importieren
 import { authRoutes } from './routes/auth'
 import { userRoutes } from './routes/users'
@@ -60,10 +63,12 @@ app.use(express.static(path.join(__dirname, '../../dist')))
 async function initDatabase() {
   try {
     console.log('✅ JSON-Datenbank wird initialisiert...')
-    
-    // JSON-DB ist bereits verfügbar
     console.log('✅ JSON-Datenbank bereit')
     
+    if (process.env.NODE_ENV === 'production' && process.env.JSON_DB_RESET_ON_DEPLOY === '1') {
+      await resetJsonDbIfNeeded()
+      await seedAdminIfNeeded()
+    }
   } catch (error) {
     console.error('❌ Datenbankverbindungsfehler:', error)
     process.exit(1)
@@ -123,8 +128,13 @@ process.on('SIGTERM', async () => {
 })
 
 // Server starten
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Production Server läuft auf Port ${PORT}`)
-})
+async function startServer() {
+  await initDatabase()
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 Production Server läuft auf Port ${PORT}`)
+  })
+}
+
+startServer().catch(console.error)
 
 export { app }
