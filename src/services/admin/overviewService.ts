@@ -36,7 +36,10 @@ export const overviewService = {
 
       if (response.status === 401 || response.status === 403) {
         // Bei Authentifizierungsproblemen zum Login weiterleiten
-        window.location.href = '/login'
+        const __cur = new URL(window.location.href);
+        if (__cur.pathname !== '/login') {
+          window.location.href = '/login'
+        }
         throw new Error('Nicht autorisiert')
       }
 
@@ -64,9 +67,9 @@ export const overviewService = {
     let globalOffen = 0
 
     budgets.forEach(budget => {
-      // Berechne verplante Tage basierend auf pending Urlauben
+      // Berechne verplante Tage basierend auf pending und approved Urlauben
       const mitarbeiterUrlaube = allUrlaube.filter(u => 
-        u.mitarbeiterId == budget.mitarbeiterId && u.status === 'pending'
+        u.mitarbeiterId == budget.mitarbeiterId && (u.status === 'pending' || u.status === 'approved')
       )
       
       const verplanteTage = mitarbeiterUrlaube.reduce((total, urlaub) => {
@@ -75,7 +78,7 @@ export const overviewService = {
         return total + calculateWorkingDays(start, end)
       }, 0)
 
-      const zuVerplanen = Math.max(0, budget.jahresanspruch - budget.genommen - verplanteTage)
+      const zuVerplanen = budget.jahresanspruch - budget.genommen - verplanteTage
       const offen = mitarbeiterUrlaube.length
 
       stats.push({
@@ -94,9 +97,11 @@ export const overviewService = {
 
     // Nach Nachnamen sortieren
     stats.sort((a, b) => {
-      const nachNameA = a.name.split(' ').pop() || a.name
-      const nachNameB = b.name.split(' ').pop() || b.name
-      return nachNameA.localeCompare(nachNameB)
+      const namePartsA = a.name.trim().split(' ')
+      const namePartsB = b.name.trim().split(' ')
+      const nachNameA = namePartsA.length > 1 ? namePartsA[namePartsA.length - 1] : a.name
+      const nachNameB = namePartsB.length > 1 ? namePartsB[namePartsB.length - 1] : b.name
+      return nachNameA.localeCompare(nachNameB, 'de', { sensitivity: 'base' })
     })
 
     return {
@@ -117,7 +122,7 @@ export const overviewService = {
     if (!mitarbeiterBudget) return 'nicht-eingetragen'
     
     const verplanteTage = mitarbeiterUrlaube
-      .filter(u => u.status === 'pending')
+      .filter(u => u.status === 'pending' || u.status === 'approved')
       .reduce((total, urlaub) => {
         const start = new Date(urlaub.startDatum)
         const end = new Date(urlaub.endDatum)
@@ -133,6 +138,10 @@ export const overviewService = {
 
   // Formatierungshilfen
   formatDate(dateString: string): string {
-    return new Date(dateString).toLocaleDateString('de-DE')
+    const date = new Date(dateString)
+    const day = date.getDate().toString().padStart(2, '0')
+    const month = (date.getMonth() + 1).toString().padStart(2, '0')
+    const year = date.getFullYear()
+    return `${day}.${month}.${year}`
   }
 }

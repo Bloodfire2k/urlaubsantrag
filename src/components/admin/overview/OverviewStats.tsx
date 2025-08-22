@@ -1,18 +1,20 @@
 import React from 'react'
-import { Calendar, Clock, CheckCircle } from 'lucide-react'
-import { GlobalStats, UrlaubBudget } from '../../../types/admin/overview'
+import { Calendar, Clock, CheckCircle, AlertTriangle } from 'lucide-react'
+import { GlobalStats, UrlaubBudget, MitarbeiterStats } from '../../../types/admin/overview'
 
 interface OverviewStatsProps {
   globalStats: GlobalStats
   budgets: UrlaubBudget[]
+  mitarbeiterStats: MitarbeiterStats[]
 }
 
 export const OverviewStats: React.FC<OverviewStatsProps> = ({
   globalStats,
-  budgets
+  budgets,
+  mitarbeiterStats
 }) => {
   return (
-    <div className="stats-modern">
+    <div className="grid grid-cols-3 gap-4 w-full">
       <div className="stat-card-modern">
         <div className="stat-figure text-white mb-4">
           <Calendar className="w-8 h-8" />
@@ -38,6 +40,8 @@ export const OverviewStats: React.FC<OverviewStatsProps> = ({
         <div className="stat-number-modern">{globalStats.zuVerplanen}</div>
         <div className="stat-label-modern">Verfügbarer Urlaub</div>
       </div>
+
+
     </div>
   )
 }

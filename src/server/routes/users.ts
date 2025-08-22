@@ -60,11 +60,16 @@ router.get('/', authenticateToken, (req: Request, res: Response) => {
     let users: any[] = []
 
     if (req.user.role === 'admin') {
-      // Admins sehen alle Benutzer
-      users = db.all('SELECT * FROM users ORDER BY created_at DESC')
+      // Admins sehen alle aktiven Benutzer (außer für Benutzerverwaltung)
+      const showInactive = req.query.include_inactive === 'true'
+      if (showInactive) {
+        users = db.all('SELECT * FROM users ORDER BY created_at DESC')
+      } else {
+        users = db.all('SELECT * FROM users WHERE is_active = 1 ORDER BY created_at DESC')
+      }
     } else if (req.user.role === 'manager') {
-      // Manager sehen nur Benutzer ihres Marktes
-      users = db.all('SELECT * FROM users WHERE market_id = ? ORDER BY created_at DESC', [req.user.marketId])
+      // Manager sehen nur aktive Benutzer ihres Marktes
+      users = db.all('SELECT * FROM users WHERE market_id = ? AND is_active = 1 ORDER BY created_at DESC', [req.user.marketId])
     } else {
       // Mitarbeiter sehen nur sich selbst
       users = db.all('SELECT * FROM users WHERE id = ?', [req.user.userId])
@@ -442,11 +447,10 @@ router.get('/stats/overview', authenticateToken, requireManagerOrAdmin, (req: Re
   }
 })
 
-// Änderung: Passwort-Reset-Route hinzugefügt. Grund: Admin kann Mitarbeiter-Passwörter zurücksetzen
-// WICHTIG: Muss vor /:id Route stehen, da spezifischere Routen zuerst definiert werden müssen
+// Passwort-Reset Route (nur für Admins)
 router.put('/:id/password', authenticateToken, requireAdmin, async (req: Request, res: Response) => {
   try {
-    const { id } = req.params
+    const userId = parseInt(req.params.id)
     const { password } = req.body
 
     if (!password) {
@@ -454,69 +458,33 @@ router.put('/:id/password', authenticateToken, requireAdmin, async (req: Request
     }
 
     // Benutzer existiert prüfen
-    const existingUser = db.get('SELECT * FROM users WHERE id = ?', [id])
+    const existingUser = db.getUserById(userId)
     if (!existingUser) {
       return res.status(404).json({ error: 'Benutzer nicht gefunden' })
     }
 
     // Passwort hashen
-    const hashedPassword = await bcrypt.hash(password, 10)
+    const hashedPassword = await bcrypt.hash(password, 12)
 
-    // Passwort in Datenbank aktualisieren
-    db.run('UPDATE users SET password_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', 
-      [hashedPassword, id])
+    // Passwort in JSON-Datenbank aktualisieren
+    const updatedUser = db.updateUser(userId, { 
+      password_hash: hashedPassword,
+      updated_at: new Date().toISOString()
+    })
+
+    if (updatedUser === null) {
+      return res.status(500).json({ error: 'Fehler beim Aktualisieren des Passworts' })
+    }
 
     res.json({ 
       success: true, 
-      message: 'Passwort erfolgreich aktualisiert',
-      newPassword: password // Für Admin-Anzeige
+      message: 'Passwort erfolgreich zurückgesetzt'
     })
 
   } catch (error) {
     console.error('Fehler beim Passwort-Reset:', error)
     res.status(500).json({ 
       error: 'Interner Server-Fehler beim Passwort-Reset' 
-    })
-  }
-})
-
-// Änderung: Benutzer-Update-Route hinzugefügt. Grund: Admin kann Mitarbeiterdaten bearbeiten
-router.put('/:id', authenticateToken, requireAdmin, async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params
-    const { fullName, email, role, market_id, department, is_active } = req.body
-
-    // Benutzer existiert prüfen
-    const existingUser = db.get('SELECT * FROM users WHERE id = ?', [id])
-    if (!existingUser) {
-      return res.status(404).json({ error: 'Benutzer nicht gefunden' })
-    }
-
-    // Benutzer aktualisieren
-    db.run(`UPDATE users SET 
-      full_name = ?, 
-      email = ?, 
-      role = ?, 
-      market_id = ?, 
-      department = ?, 
-      is_active = ?, 
-      updated_at = CURRENT_TIMESTAMP 
-      WHERE id = ?`, 
-      [fullName, email, role, market_id, department, is_active, id])
-
-    // Aktualisierten Benutzer zurückgeben
-    const updatedUser = db.get('SELECT * FROM users WHERE id = ?', [id])
-
-    res.json({ 
-      success: true, 
-      message: 'Benutzer erfolgreich aktualisiert',
-      user: updatedUser
-    })
-
-  } catch (error) {
-    console.error('Fehler beim Benutzer-Update:', error)
-    res.status(500).json({ 
-      error: 'Interner Server-Fehler beim Benutzer-Update' 
     })
   }
 })

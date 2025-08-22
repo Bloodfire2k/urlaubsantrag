@@ -25,7 +25,57 @@ router.get('/all', authenticateToken, (req: Request, res: Response) => {
   }
 })
 
-// Einzelnes Urlaubsbudget abrufen
+// Urlaubsanspruch für Jahr setzen (spezifische Route ZUERST)
+router.put('/:userId/:year', authenticateToken, requireManagerOrAdmin, (req: Request, res: Response) => {
+  try {
+    const userId = parseInt(req.params.userId)
+    const year = parseInt(req.params.year)
+    const { jahresanspruch } = req.body
+
+    if (!budgetService.canAccessBudget(req.user.userId, req.user.role, req.user.marketId, userId)) {
+      return res.status(403).json({ error: 'Keine Berechtigung für diesen Benutzer' })
+    }
+
+    const result = budgetService.setAnnualEntitlement(userId, year, Number(jahresanspruch))
+    
+    res.json({
+      success: true,
+      message: 'Urlaubsanspruch erfolgreich aktualisiert',
+      budget: result
+    })
+  } catch (error) {
+    console.error('Fehler beim Setzen des Urlaubsanspruchs:', error)
+    res.status(500).json({ 
+      error: error instanceof Error ? error.message : 'Interner Server-Fehler' 
+    })
+  }
+})
+
+// Einzelnes Urlaubsbudget nach Jahr abrufen (spezifische Route)
+router.get('/:userId/:year', authenticateToken, (req: Request, res: Response) => {
+  try {
+    const userId = parseInt(req.params.userId)
+    const year = parseInt(req.params.year)
+    
+    if (!budgetService.canAccessBudget(req.user.userId, req.user.role, req.user.marketId, userId)) {
+      return res.status(403).json({ error: 'Keine Berechtigung für diesen Benutzer' })
+    }
+
+    const budget = budgetService.getBudget(userId, year)
+    if (!budget) {
+      return res.status(404).json({ error: 'Kein Urlaubsbudget für das Jahr gefunden' })
+    }
+
+    res.json(budget)
+  } catch (error) {
+    console.error('Fehler beim Abrufen des Urlaubsbudgets:', error)
+    res.status(500).json({ 
+      error: 'Interner Server-Fehler beim Abrufen des Urlaubsbudgets' 
+    })
+  }
+})
+
+// Einzelnes Urlaubsbudget abrufen (Legacy - allgemeine Route NACH spezifischen)
 router.get('/:userId', authenticateToken, (req: Request, res: Response) => {
   try {
     const userId = parseInt(req.params.userId)
@@ -61,7 +111,7 @@ router.get('/:userId', authenticateToken, (req: Request, res: Response) => {
 router.put('/:userId', authenticateToken, requireManagerOrAdmin, (req: Request, res: Response) => {
   try {
     const userId = parseInt(req.params.userId)
-    const { jahresanspruch, uebertrag } = req.body
+    const { jahresanspruch, uebertrag, jahr } = req.body
 
     if (!budgetService.canAccessBudget(req.user.userId, req.user.role, req.user.marketId, userId)) {
       return res.status(403).json({ error: 'Keine Berechtigung für diesen Benutzer' })
@@ -74,7 +124,7 @@ router.put('/:userId', authenticateToken, requireManagerOrAdmin, (req: Request, 
       })
     }
 
-    const budget = budgetService.getBudget(userId, new Date().getFullYear())
+    const budget = budgetService.getBudget(userId, jahr || new Date().getFullYear())
     if (!budget) {
       return res.status(404).json({ error: 'Kein Urlaubsbudget für das aktuelle Jahr gefunden' })
     }

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useReducer, useEffect } from 'react'
+import React, { createContext, useContext, useReducer, useEffect, useRef } from 'react'
 import { User, LoginCredentials, AuthState, RegisterData } from '../types/auth'
 
 // API-Basis-URL
@@ -73,9 +73,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     error: null
   })
 
-  // Prüfe gespeicherte Session beim Start
+  const isInitialized = useRef(false)
+
+  // Prüfe gespeicherte Session beim Start (nur einmal)
   useEffect(() => {
+    if (isInitialized.current) return
+    isInitialized.current = true
+    
     const savedUser = localStorage.getItem('urlaub_user')
+    
     if (savedUser) {
       try {
         const user = JSON.parse(savedUser)
@@ -130,6 +136,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     dispatch({ type: 'LOGOUT' })
     localStorage.removeItem('urlaub_user')
     localStorage.removeItem('urlaub_token')
+    sessionStorage.removeItem('activeTab')
+    window.history.replaceState(window.history.state, '', window.location.pathname)
   }
 
   const register = async (data: RegisterData): Promise<boolean> => {

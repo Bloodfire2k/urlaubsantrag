@@ -240,14 +240,14 @@ router.post('/', authenticateToken, (req: Request, res: Response) => {
 })
 
 // Urlaubsantrag genehmigen/ablehnen
-router.put('/:id/status', authenticateToken, requireManagerOrAdmin, (req: Request, res: Response) => {
+router.put('/:id/status', authenticateToken, (req: Request, res: Response) => {
   try {
-    const antragId = parseInt(req.params.id)
+    const antragId = req.params.id
     const { status, bemerkung } = req.body
 
-    if (!['approved', 'rejected'].includes(status)) {
+    if (!['approved', 'rejected', 'pending'].includes(status)) {
       return res.status(400).json({ 
-        error: 'Status muss "approved" oder "rejected" sein' 
+        error: 'Status muss "approved", "rejected" oder "pending" sein' 
       })
     }
 
@@ -262,7 +262,7 @@ router.put('/:id/status', authenticateToken, requireManagerOrAdmin, (req: Reques
 
     const updatedAntrag = urlaubService.updateUrlaubStatus(
       antragId,
-      status as 'approved' | 'rejected',
+      status as 'approved' | 'rejected' | 'pending',
       req.user.userId
     )
 
@@ -303,9 +303,10 @@ router.delete('/:id', authenticateToken, (req: Request, res: Response) => {
       return res.status(403).json({ error: 'Keine Berechtigung für diesen Antrag' })
     }
 
-    if (antrag.status !== 'pending') {
+    // Erlaube das Löschen von pending und rejected Anträgen
+    if (antrag.status === 'approved') {
       return res.status(400).json({ 
-        error: 'Nur ausstehende Anträge können gelöscht werden' 
+        error: 'Genehmigte Anträge können nicht gelöscht werden' 
       })
     }
 

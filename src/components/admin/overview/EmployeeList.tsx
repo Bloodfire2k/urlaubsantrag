@@ -1,19 +1,21 @@
 import React from 'react'
 import { User, ChevronRight, ShieldCheck, AlertTriangle, Ban } from 'lucide-react'
-import { MitarbeiterStats } from '../../../types/admin/overview'
+import { MitarbeiterStats, UrlaubBudget } from '../../../types/admin/overview'
 
 interface EmployeeListProps {
   filteredStats: MitarbeiterStats[]
   statusFilter: string | null
   getUrlaubsStatus: (mitarbeiterId: number) => 'eingetragen' | 'teilweise' | 'nicht-eingetragen'
   onMitarbeiterClick: (mitarbeiterId: number) => void
+  budgets: UrlaubBudget[]
 }
 
 export const EmployeeList: React.FC<EmployeeListProps> = ({
   filteredStats,
   statusFilter,
   getUrlaubsStatus,
-  onMitarbeiterClick
+  onMitarbeiterClick,
+  budgets
 }) => {
   return (
     <>
@@ -28,12 +30,21 @@ export const EmployeeList: React.FC<EmployeeListProps> = ({
       </p>
       
       <div className="space-y-4">
-        {filteredStats.map(stats => (
-          <div
-            key={stats.id}
-            className="list-item-modern card border border-base-300 bg-base-100 shadow rounded-2xl cursor-pointer hover:shadow-lg transition-all"
-            onClick={() => onMitarbeiterClick(stats.id)}
-          >
+                 {filteredStats.map(stats => {
+           // Prüfe ob Mitarbeiter zu viel Urlaub beantragt hat
+           // Wenn zuVerplanen negativ ist, hat er zu viel beantragt
+           const hasExcessiveUrlaub = stats.zuVerplanen < 0;
+           
+           return (
+            <div
+              key={stats.id}
+              className={`list-item-modern card border-2 shadow rounded-2xl cursor-pointer hover:shadow-lg transition-all ${
+                hasExcessiveUrlaub 
+                  ? '!border-orange-400 !bg-gradient-to-r !from-orange-50 !to-red-50' 
+                  : 'border-base-300 bg-base-100'
+              }`}
+              onClick={() => onMitarbeiterClick(stats.id)}
+            >
             <div className="card-body p-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
@@ -41,7 +52,7 @@ export const EmployeeList: React.FC<EmployeeListProps> = ({
                     <div className="font-bold text-lg">{stats.name}</div>
                     <div className="flex items-center gap-2 text-gray-500 text-sm mt-1">
                       <User className="w-4 h-4" />
-                      <span>Anspruch: {stats.jahresanspruch} • Verplant: {stats.verplant} • Verfügbar: {stats.zuVerplanen}</span>
+                      <span>Anspruch: {stats.jahresanspruch} • Verplant: {stats.verplant} • Rest: {stats.zuVerplanen < 0 ? `-${Math.abs(stats.zuVerplanen)}` : stats.zuVerplanen}</span>
                     </div>
                     <div className="text-gray-400 text-sm">Mitarbeiter ID: {stats.id}</div>
                   </div>
@@ -79,10 +90,7 @@ export const EmployeeList: React.FC<EmployeeListProps> = ({
                     }
                   })()}
                   
-                  {/* Status Badge */}
-                  <div className="badge badge-success text-white font-medium px-4 py-2 rounded-full">
-                    AKTIV
-                  </div>
+
                   
                   {/* Details Button */}
                   <button
@@ -99,7 +107,8 @@ export const EmployeeList: React.FC<EmployeeListProps> = ({
               </div>
             </div>
           </div>
-        ))}
+        );
+        })}
       </div>
     </>
   )

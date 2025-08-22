@@ -20,7 +20,7 @@ export const userService = {
       throw new Error('Kein Token gefunden')
     }
 
-    const response = await fetch(`${API_BASE_URL}/users`, {
+    const response = await fetch(`${API_BASE_URL}/users?include_inactive=true`, {
       headers: {
         'Authorization': `Bearer ${token}`
       }
@@ -111,6 +111,28 @@ export const userService = {
     if (response.ok) {
       return newPassword
     } else {
+      const error = await response.json()
+      throw new Error(error.message)
+    }
+  },
+
+  // Eigenes Passwort setzen
+  async setCustomPassword(userId: number, password: string): Promise<void> {
+    const token = localStorage.getItem('urlaub_token')
+    if (!token) {
+      throw new Error('Kein gültiges Token gefunden')
+    }
+
+    const response = await fetch(`${API_BASE_URL}/users/${userId}/password`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ password })
+    })
+
+    if (!response.ok) {
       const error = await response.json()
       throw new Error(error.message)
     }

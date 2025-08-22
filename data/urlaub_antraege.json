@@ -1,43 +1,27 @@
 [
   {
     "mitarbeiterId": 7,
-    "startDatum": "2026-01-05",
-    "endDatum": "2026-01-13",
-    "bemerkung": "",
-    "status": "pending",
-    "id": 2,
-    "created_at": "2025-08-13T13:12:00.994Z",
-    "updated_at": "2025-08-13T13:12:00.994Z"
-  },
-  {
-    "mitarbeiterId": 7,
-    "startDatum": "2026-01-01",
-    "endDatum": "2026-01-10",
-    "bemerkung": "",
-    "status": "pending",
-    "id": 4,
-    "created_at": "2025-08-13T13:28:27.260Z",
-    "updated_at": "2025-08-13T13:28:27.260Z"
-  },
-  {
-    "mitarbeiterId": 7,
     "startDatum": "2026-02-02",
     "endDatum": "2026-02-07",
     "bemerkung": "",
-    "status": "pending",
+    "status": "approved",
     "id": 6,
     "created_at": "2025-08-13T13:44:42.986Z",
-    "updated_at": "2025-08-13T13:44:42.986Z"
+    "updated_at": "2025-08-22T14:32:47.938Z",
+    "genehmigt_von": 2,
+    "genehmigt_am": "2025-08-22T14:32:47.937Z"
   },
   {
     "mitarbeiterId": 7,
     "startDatum": "2026-07-13",
     "endDatum": "2026-07-25",
     "bemerkung": "",
-    "status": "pending",
+    "status": "approved",
     "id": 9,
     "created_at": "2025-08-13T14:17:26.867Z",
-    "updated_at": "2025-08-13T14:17:26.867Z"
+    "updated_at": "2025-08-19T13:52:43.505Z",
+    "genehmigt_von": 2,
+    "genehmigt_am": "2025-08-19T13:52:43.505Z"
   },
   {
     "mitarbeiterId": 8,
@@ -97,7 +81,9 @@
     "status": "pending",
     "id": 15,
     "created_at": "2025-08-14T22:47:20.382Z",
-    "updated_at": "2025-08-14T22:47:20.382Z"
+    "updated_at": "2025-08-22T15:01:05.877Z",
+    "genehmigt_von": null,
+    "genehmigt_am": null
   },
   {
     "mitarbeiterId": 9,
@@ -107,7 +93,9 @@
     "status": "pending",
     "id": 16,
     "created_at": "2025-08-14T22:47:30.538Z",
-    "updated_at": "2025-08-14T22:47:30.538Z"
+    "updated_at": "2025-08-21T12:31:08.553Z",
+    "genehmigt_von": null,
+    "genehmigt_am": null
   },
   {
     "mitarbeiterId": 9,
@@ -117,57 +105,69 @@
     "status": "pending",
     "id": 17,
     "created_at": "2025-08-14T22:47:39.741Z",
-    "updated_at": "2025-08-14T22:47:39.741Z"
+    "updated_at": "2025-08-21T14:17:57.005Z",
+    "genehmigt_von": null,
+    "genehmigt_am": null
   },
   {
     "mitarbeiterId": 9,
     "startDatum": "2026-11-23",
     "endDatum": "2026-11-24",
     "bemerkung": "",
-    "status": "pending",
+    "status": "approved",
     "id": 18,
     "created_at": "2025-08-14T22:48:06.578Z",
-    "updated_at": "2025-08-14T22:48:06.578Z"
+    "updated_at": "2025-08-19T12:14:55.630Z",
+    "genehmigt_von": 2,
+    "genehmigt_am": "2025-08-19T12:14:55.630Z"
   },
   {
     "mitarbeiterId": 10,
     "startDatum": "2026-01-26",
     "endDatum": "2026-01-31",
     "bemerkung": "",
-    "status": "pending",
+    "status": "approved",
     "id": 19,
     "created_at": "2025-08-15T10:32:30.492Z",
-    "updated_at": "2025-08-15T10:32:30.492Z"
+    "updated_at": "2025-08-19T12:01:55.724Z",
+    "genehmigt_von": 2,
+    "genehmigt_am": "2025-08-19T12:01:55.724Z"
   },
   {
     "mitarbeiterId": 10,
     "startDatum": "2026-07-06",
     "endDatum": "2026-07-25",
     "bemerkung": "",
-    "status": "pending",
+    "status": "approved",
     "id": 20,
     "created_at": "2025-08-15T10:32:38.072Z",
-    "updated_at": "2025-08-15T10:32:38.072Z"
+    "updated_at": "2025-08-19T12:06:48.203Z",
+    "genehmigt_von": 2,
+    "genehmigt_am": "2025-08-19T12:06:48.203Z"
   },
   {
     "mitarbeiterId": 10,
     "startDatum": "2026-11-09",
     "endDatum": "2026-11-21",
     "bemerkung": "",
-    "status": "pending",
+    "status": "approved",
     "id": 21,
     "created_at": "2025-08-15T10:32:47.248Z",
-    "updated_at": "2025-08-15T10:32:47.248Z"
+    "updated_at": "2025-08-19T12:12:29.509Z",
+    "genehmigt_von": 2,
+    "genehmigt_am": "2025-08-19T12:12:29.509Z"
   },
   {
     "mitarbeiterId": 11,
     "startDatum": "2026-01-05",
     "endDatum": "2026-01-17",
     "bemerkung": "",
-    "status": "pending",
+    "status": "approved",
     "id": 22,
     "created_at": "2025-08-15T10:51:58.671Z",
-    "updated_at": "2025-08-15T10:51:58.671Z"
+    "updated_at": "2025-08-19T12:05:34.683Z",
+    "genehmigt_von": 2,
+    "genehmigt_am": "2025-08-19T12:05:34.683Z"
   },
   {
     "mitarbeiterId": 11,
@@ -177,7 +177,9 @@
     "status": "pending",
     "id": 23,
     "created_at": "2025-08-15T10:52:12.669Z",
-    "updated_at": "2025-08-15T10:52:12.669Z"
+    "updated_at": "2025-08-19T12:26:15.659Z",
+    "genehmigt_von": null,
+    "genehmigt_am": null
   },
   {
     "mitarbeiterId": 11,
@@ -194,9 +196,129 @@
     "startDatum": "2026-01-12",
     "endDatum": "2026-01-14",
     "bemerkung": "",
-    "status": "pending",
+    "status": "approved",
     "id": 26,
     "created_at": "2025-08-15T11:30:40.305Z",
-    "updated_at": "2025-08-15T11:30:40.305Z"
+    "updated_at": "2025-08-21T15:21:58.988Z",
+    "genehmigt_von": 2,
+    "genehmigt_am": "2025-08-21T15:21:58.988Z"
+  },
+  {
+    "mitarbeiterId": 3,
+    "startDatum": "2026-06-08",
+    "endDatum": "2026-06-27",
+    "bemerkung": "",
+    "status": "rejected",
+    "id": 27,
+    "created_at": "2025-08-19T14:21:59.588Z",
+    "updated_at": "2025-08-19T14:27:14.160Z",
+    "genehmigt_von": 2,
+    "genehmigt_am": "2025-08-19T14:27:14.160Z"
+  },
+  {
+    "mitarbeiterId": 3,
+    "startDatum": "2026-08-10",
+    "endDatum": "2026-08-15",
+    "bemerkung": "",
+    "status": "pending",
+    "id": 30,
+    "created_at": "2025-08-19T15:06:09.936Z",
+    "updated_at": "2025-08-19T15:06:09.936Z"
+  },
+  {
+    "mitarbeiterId": 12,
+    "startDatum": "2026-01-12",
+    "endDatum": "2026-01-17",
+    "bemerkung": "",
+    "status": "pending",
+    "id": 31,
+    "created_at": "2025-08-19T15:08:09.921Z",
+    "updated_at": "2025-08-19T15:11:59.116Z",
+    "genehmigt_von": null,
+    "genehmigt_am": null
+  },
+  {
+    "mitarbeiterId": 12,
+    "startDatum": "2026-04-13",
+    "endDatum": "2026-04-18",
+    "bemerkung": "",
+    "status": "rejected",
+    "id": 32,
+    "created_at": "2025-08-19T15:08:25.872Z",
+    "updated_at": "2025-08-19T15:08:53.134Z",
+    "genehmigt_von": 2,
+    "genehmigt_am": "2025-08-19T15:08:53.134Z"
+  },
+  {
+    "mitarbeiterId": 7,
+    "startDatum": "2026-01-01",
+    "endDatum": "2026-01-17",
+    "bemerkung": "",
+    "status": "pending",
+    "id": 33,
+    "created_at": "2025-08-21T15:40:07.795Z",
+    "updated_at": "2025-08-22T14:53:58.044Z",
+    "genehmigt_von": null,
+    "genehmigt_am": null
+  },
+  {
+    "mitarbeiterId": 7,
+    "startDatum": "2026-04-13",
+    "endDatum": "2026-04-16",
+    "bemerkung": "",
+    "status": "pending",
+    "id": 34,
+    "created_at": "2025-08-21T15:59:15.789Z",
+    "updated_at": "2025-08-22T10:45:39.326Z",
+    "genehmigt_von": null,
+    "genehmigt_am": null
+  },
+  {
+    "mitarbeiterId": 4,
+    "startDatum": "2026-01-01",
+    "endDatum": "2026-01-10",
+    "bemerkung": "",
+    "status": "pending",
+    "id": 42,
+    "created_at": "2025-08-22T10:53:51.228Z",
+    "updated_at": "2025-08-22T13:33:36.280Z",
+    "genehmigt_von": null,
+    "genehmigt_am": null
+  },
+  {
+    "mitarbeiterId": 4,
+    "startDatum": "2026-03-09",
+    "endDatum": "2026-03-21",
+    "bemerkung": "",
+    "status": "approved",
+    "id": 43,
+    "created_at": "2025-08-22T10:54:05.353Z",
+    "updated_at": "2025-08-22T13:32:29.440Z",
+    "genehmigt_von": 2,
+    "genehmigt_am": "2025-08-22T13:32:29.440Z"
+  },
+  {
+    "mitarbeiterId": 4,
+    "startDatum": "2026-07-13",
+    "endDatum": "2026-07-23",
+    "bemerkung": "",
+    "status": "rejected",
+    "id": 44,
+    "created_at": "2025-08-22T12:39:20.774Z",
+    "updated_at": "2025-08-22T14:40:14.992Z",
+    "genehmigt_von": 2,
+    "genehmigt_am": "2025-08-22T14:40:14.992Z"
+  },
+  {
+    "mitarbeiterId": 4,
+    "startDatum": "2026-01-19",
+    "endDatum": "2026-01-24",
+    "bemerkung": "",
+    "status": "pending",
+    "id": 45,
+    "created_at": "2025-08-22T12:40:13.904Z",
+    "updated_at": "2025-08-22T14:41:59.709Z",
+    "genehmigt_von": null,
+    "genehmigt_am": null
   }
 ]

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react'
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react'
 
 interface YearContextType {
   selectedYear: number
@@ -13,6 +13,17 @@ export const YearProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear())
   const [isAdmin, setIsAdmin] = useState<boolean>(false)
 
+  const setSelectedYearIdempotent = useCallback((next: number) => {
+    setSelectedYear(prev => {
+      if (prev === next) return prev; // Idempotent - keine Änderung wenn gleicher Wert
+      
+      // Jahr global für alle Benutzer speichern
+      localStorage.setItem('global_vacation_year', next.toString())
+      console.log('📅 Jahr geändert zu:', next)
+      return next;
+    })
+  }, [])
+
   // Jahr beim Start laden (für alle Benutzer)
   useEffect(() => {
     const savedYear = localStorage.getItem('global_vacation_year')
@@ -23,27 +34,22 @@ export const YearProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Prüfe ob das gespeicherte Jahr in der Zukunft liegt
       if (parsedYear > currentYear + 1) {
         // Setze auf aktuelles Jahr zurück
-        handleSetSelectedYear(currentYear)
+        setSelectedYearIdempotent(currentYear)
       } else {
         setSelectedYear(parsedYear)
       }
     } else {
       // Wenn kein Jahr gespeichert ist, das aktuelle Jahr speichern
-      handleSetSelectedYear(currentYear)
+      setSelectedYearIdempotent(currentYear)
     }
-  }, [])
+  }, [setSelectedYearIdempotent])
 
-  const handleSetSelectedYear = (year: number) => {
-    setSelectedYear(year)
-    // Jahr global für alle Benutzer speichern
-    localStorage.setItem('global_vacation_year', year.toString())
-    console.log('📅 Jahr geändert zu:', year)
-  }
+  // URL-Synchronisation erfolgt in App.tsx - hier nur State verwalten
 
   return (
     <YearContext.Provider value={{
       selectedYear,
-      setSelectedYear: handleSetSelectedYear,
+      setSelectedYear: setSelectedYearIdempotent,
       isAdmin,
       setIsAdmin
     }}>

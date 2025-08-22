@@ -20,7 +20,12 @@ export const RouteErrorBoundary: React.FC<Props> = ({ children }) => {
               </p>
               <div className="card-actions">
                 <button
-                  onClick={() => window.location.href = '/'}
+                  onClick={() => {
+                    const __cur = new URL(window.location.href);
+                    if (__cur.pathname !== '/') {
+                      window.location.href = '/';
+                    }
+                  }}
                   className="btn btn-primary"
                 >
                   Zur Startseite

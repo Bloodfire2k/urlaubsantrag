@@ -1,9 +1,10 @@
 import React from 'react'
-import { User, Building, ChevronRight, UserPlus, Trash2, Edit, Lock, Ban, Eye, Calendar, Users, Shield, MapPin } from 'lucide-react'
+import { User, Building, ChevronRight, UserPlus, Trash, Edit, Lock, Ban, Eye, Calendar, Users, Shield, MapPin, Search } from 'lucide-react'
 import { User as UserType } from '../../../types/admin/user'
 import { useUserManagement } from '../../../hooks/admin/useUserManagement'
 import { UserStatusBadge } from './UserStatusBadge'
 import { UserModal } from './UserModal'
+import { PasswordModal } from './PasswordModal'
 import { useAuth } from '../../../contexts/AuthContext'
 import { useYear } from '../../../contexts/YearContext'
 
@@ -32,16 +33,28 @@ const UserList: React.FC = () => {
     editingUser,
     setEditingUser,
     toast,
+    setToast,
     userForm,
     setUserForm,
+    searchTerm,
+    setSearchTerm,
     handleNameChange,
     handleEditUser,
     handleResetPassword,
+    resetPasswordForModal,
+    setCustomPassword,
     handleUpdateUser,
     handleCreateUser,
     handleToggleUserStatus,
     handleDeleteUser
   } = useUserManagement()
+
+  // Password Modal State
+  const [passwordModal, setPasswordModal] = React.useState<{
+    isOpen: boolean
+    user?: UserType
+    newPassword?: string
+  }>({ isOpen: false })
 
   if (user?.role !== 'admin') {
     return (
@@ -70,6 +83,36 @@ const UserList: React.FC = () => {
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
       </div>
     )
+  }
+
+  // Password Modal Handlers
+  const handleOpenPasswordModal = (selectedUser: UserType) => {
+    setPasswordModal({
+      isOpen: true,
+      user: selectedUser
+    })
+  }
+
+  const handleResetPasswordInModal = async () => {
+    if (!passwordModal.user) return
+    
+    try {
+      const result = await resetPasswordForModal(passwordModal.user.id)
+      if (result) {
+        setPasswordModal(prev => ({
+          ...prev,
+          newPassword: result.newPassword
+        }))
+      }
+    } catch (error) {
+      console.error('Fehler beim Generieren des Passworts:', error)
+      throw error
+    }
+  }
+
+  const handleSetCustomPassword = async (password: string) => {
+    if (!passwordModal.user) return
+    await setCustomPassword(passwordModal.user.id, password)
   }
 
   return (
@@ -149,6 +192,23 @@ const UserList: React.FC = () => {
               </button>
             </div>
 
+            {/* Suchfeld */}
+            <div className="list-item-modern card border border-base-300 bg-base-100 shadow rounded-2xl mb-6">
+              <div className="card-body p-6">
+                <div className="flex items-center gap-3 mb-3">
+                  <Search className="w-5 h-5 text-gray-600" />
+                  <span className="text-lg font-semibold text-gray-700">Mitarbeiter durchsuchen</span>
+                </div>
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="input input-bordered w-full rounded-lg"
+                  placeholder="Nach Mitarbeitern suchen (Name, Benutzername, E-Mail)"
+                />
+              </div>
+            </div>
+
             <div className="space-y-4">
               {users.map(user => (
                 <div
@@ -191,9 +251,9 @@ const UserList: React.FC = () => {
                           </button>
 
                           <button
-                            onClick={() => handleResetPassword(user.id)}
+                            onClick={() => handleOpenPasswordModal(user)}
                             className="btn btn-circle btn-outline btn-sm hover:btn-warning"
-                            title="Passwort zurücksetzen"
+                            title="Passwort verwalten"
                           >
                             <Lock size={16} />
                           </button>
@@ -206,15 +266,14 @@ const UserList: React.FC = () => {
                             {user.is_active ? <Ban size={16} /> : <Eye size={16} />}
                           </button>
 
-                          {user.is_active && (
-                            <button
-                              onClick={() => handleDeleteUser(user.id)}
-                              className="btn btn-circle btn-error btn-sm text-white"
-                              title="Mitarbeiter DAUERHAFT löschen"
-                            >
-                              <Trash2 size={16} />
-                            </button>
-                          )}
+                          {/* Löschen Button */}
+                          <button
+                            onClick={() => handleDeleteUser(user.id)}
+                            className="btn btn-circle btn-error btn-sm"
+                            title="Mitarbeiter DAUERHAFT löschen"
+                          >
+                            <span className="text-red-600 text-lg">🗑️</span>
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -255,13 +314,31 @@ const UserList: React.FC = () => {
         onSubmit={handleUpdateUser}
       />
 
+      {/* Password Modal */}
+      <PasswordModal
+        isOpen={passwordModal.isOpen}
+        onClose={() => setPasswordModal({ isOpen: false })}
+        userName={passwordModal.user?.fullName || ''}
+        newPassword={passwordModal.newPassword}
+        onSetCustomPassword={handleSetCustomPassword}
+        onResetPassword={handleResetPasswordInModal}
+      />
+
       {/* Toast Notification */}
       {toast && (
-        <div className="fixed top-20 right-5 z-50 p-4 rounded-xl bg-white shadow-lg border-2 max-w-md animate-fade-in">
-          <div className={`text-sm font-medium ${
+        <div className="fixed top-20 right-5 z-50 p-6 rounded-xl bg-white shadow-2xl border-2 max-w-lg animate-fade-in">
+          <div className={`text-sm font-medium whitespace-pre-line leading-relaxed ${
             toast.type === 'success' ? 'text-green-600' : 'text-red-600'
           }`}>
             {toast.message}
+          </div>
+          <div className="mt-3 flex justify-end">
+            <button 
+              onClick={() => setToast(null)}
+              className="text-xs text-gray-500 hover:text-gray-700 underline"
+            >
+              Schließen
+            </button>
           </div>
         </div>
       )}

@@ -30,20 +30,41 @@ const Stats: React.FC<StatsProps> = ({ budget, urlaube = [] }) => {
     return tage
   }, [urlaube]) // Nur neu berechnen wenn sich urlaube ändern
 
-  // Budget mit korrekten verplanten Tagen (überschreibt Backend-Werte)
+  // Berechnung der genommenen Urlaubstage (genehmigte + verplante Urlaube)
+  const genommeneTage = useMemo(() => {
+    let tage = 0
+    try {
+      const approvedAndPendingUrlaube = urlaube.filter(u => u.status === 'approved' || u.status === 'pending')
+      tage = approvedAndPendingUrlaube.reduce((total, urlaub) => {
+        const start = new Date(urlaub.startDatum)
+        const end = new Date(urlaub.endDatum)
+        const workingDays = calculateWorkingDays(start, end)
+
+        return total + workingDays
+      }, 0)
+
+    } catch (error) {
+      console.error('Fehler bei Urlaubsberechnung:', error)
+      tage = urlaube.filter(u => u.status === 'approved' || u.status === 'pending').length * 5 // Fallback
+    }
+    return tage
+  }, [urlaube])
+
+  // Budget mit korrekten Tagen (überschreibt Backend-Werte)
   const tempBudget = budget ? {
     ...budget,
-    verplant: verplanteTage  // Verwende die korrekt berechneten Arbeitstage
+    verplant: genommeneTage,  // Zeige alle genommenen/verplanten Tage als "verplant"
+    genommen: genommeneTage   // Verwende die korrekt berechneten genehmigten + verplanten Tage
   } : {
     jahresanspruch: 36,
-    genommen: 0,
-    verplant: verplanteTage,
+    genommen: genommeneTage,
+    verplant: genommeneTage,
     uebertrag: 0
   }
 
 
 
-  const verfügbar = tempBudget.jahresanspruch - tempBudget.genommen - tempBudget.verplant
+  const verfügbar = tempBudget.jahresanspruch - tempBudget.genommen
 
   return (
     <div className="stats-modern">

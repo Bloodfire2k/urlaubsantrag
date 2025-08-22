@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useYear } from '../../contexts/YearContext'
 import { useAuth } from '../../contexts/AuthContext'
 import { useVacationData } from '../../hooks/vacation/useVacationData'
@@ -6,6 +6,7 @@ import { useVacationCalendar } from '../../hooks/vacation/useVacationCalendar'
 import { VacationFilters } from './VacationFilters'
 import { VacationCalendar } from './VacationCalendar'
 import { NoEmployeesFound } from './NoEmployeesFound'
+import { EmployeeDetails } from '../admin/overview/EmployeeDetails'
 
 const Pruefung: React.FC = () => {
   const { selectedYear } = useYear()
@@ -14,8 +15,16 @@ const Pruefung: React.FC = () => {
   
   const [selectedMarket, setSelectedMarket] = useState<number | null>(null)
   const [selectedDepartment, setSelectedDepartment] = useState<string>('')
+  const [selectedEmployee, setSelectedEmployee] = useState<number | null>(null)
+  const selectedEmployeeRef = useRef<number | null>(null)
+  const [busyId, setBusyId] = useState<string | null>(null)
 
-  const { markets, users, urlaube, loading } = useVacationData(token, selectedYear)
+  const { markets, users, urlaube: dataUrlaube, loading } = useVacationData(token, selectedYear)
+  const [urlaube, setUrlaube] = useState(dataUrlaube ?? [])
+
+  useEffect(() => {
+    setUrlaube(dataUrlaube ?? [])
+  }, [dataUrlaube])
 
   const {
     currentMonth,
@@ -24,9 +33,104 @@ const Pruefung: React.FC = () => {
     visibleEmployees,
     isHoliday,
     hasVacationOnDay,
+    hasRejectedVacationOnDay,
+    getVacationStatusOnDay,
     navigateMonth,
     toggleEmployeeVisibility
   } = useVacationCalendar(users, urlaube, selectedMarket, selectedDepartment, selectedYear)
+
+  // Gefilterte Urlaube für den aktuellen Monat
+  const monthlyUrlaube = urlaube.filter(urlaub => {
+    const urlaubDate = new Date(urlaub.startDatum)
+    return urlaubDate.getFullYear() === currentMonth.getFullYear() && 
+           urlaubDate.getMonth() === currentMonth.getMonth()
+  })
+
+  const handleEmployeeClick = (employeeId: number) => {
+    setSelectedEmployee(employeeId)
+    selectedEmployeeRef.current = employeeId
+  }
+
+  const handleStatusChange = async (urlaubId: string, newStatus: 'approved' | 'rejected' | 'pending', e?: React.MouseEvent<HTMLButtonElement>) => {
+    e?.preventDefault();
+    e?.stopPropagation();
+    
+    console.log('🔧 handleStatusChange called, urlaubId:', urlaubId, 'newStatus:', newStatus);
+    console.log('🔍 selectedEmployee before:', selectedEmployee);
+    
+    // selectedEmployee sichern BEVOR State-Updates
+    const currentSelectedEmployee = selectedEmployee;
+    
+    const snapshot = [...(urlaube ?? [])];
+    setUrlaube(prev => (prev ?? []).map(u =>
+      u.id.toString() === urlaubId ? { ...u, status: newStatus } : u
+    ));
+    setBusyId(urlaubId);
+
+    try {
+      const response = await fetch(`/api/urlaub/${urlaubId}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ status: newStatus })
+      })
+
+      if (!response.ok) throw new Error('API Fehler')
+      
+      console.log('✅ Status erfolgreich geändert, Modal bleibt offen')
+      
+      // WICHTIG: Modal-State nach API-Success explizit wiederherstellen
+      console.log('🔒 Modal-State nach API-Success wiederherstellen:', currentSelectedEmployee);
+      setSelectedEmployee(currentSelectedEmployee);
+      
+    } catch (error) {
+      console.error('❌ Fehler:', error)
+      setUrlaube(snapshot)
+      // Bei Fehler auch selectedEmployee wiederherstellen
+      setSelectedEmployee(currentSelectedEmployee);
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  const handleDelete = async (urlaubId: string) => {
+    console.log('🗑️ handleDelete called, urlaubId:', urlaubId);
+    
+    // selectedEmployee sichern BEVOR State-Updates
+    const currentSelectedEmployee = selectedEmployee;
+    
+    const snapshot = [...(urlaube ?? [])];
+    // Optimistic Update: Urlaub aus der Liste entfernen
+    setUrlaube(prev => (prev ?? []).filter(u => u.id.toString() !== urlaubId));
+    setBusyId(urlaubId);
+
+    try {
+      const response = await fetch(`/api/urlaub/${urlaubId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+
+      if (!response.ok) throw new Error('API Fehler beim Löschen')
+      
+      console.log('✅ Urlaub erfolgreich gelöscht, Modal bleibt offen')
+      
+      // WICHTIG: Modal-State nach API-Success explizit wiederherstellen
+      console.log('🔒 Modal-State nach API-Success wiederherstellen:', currentSelectedEmployee);
+      setSelectedEmployee(currentSelectedEmployee);
+      
+    } catch (error) {
+      console.error('❌ Fehler beim Löschen:', error)
+      setUrlaube(snapshot)
+      // Bei Fehler auch selectedEmployee wiederherstellen
+      setSelectedEmployee(currentSelectedEmployee);
+    } finally {
+      setBusyId(null)
+    }
+  }
 
   // Zeige Loading nur wenn wirklich geladen wird
   if (loading && token && user) {
@@ -91,13 +195,34 @@ const Pruefung: React.FC = () => {
           monthDays={monthDays}
           isHoliday={isHoliday}
           hasVacationOnDay={hasVacationOnDay}
+          hasRejectedVacationOnDay={hasRejectedVacationOnDay}
+          getVacationStatusOnDay={getVacationStatusOnDay}
           navigateMonth={navigateMonth}
           toggleEmployeeVisibility={toggleEmployeeVisibility}
+          handleEmployeeClick={handleEmployeeClick}
         />
       ) : (
         <NoEmployeesFound
           selectedMarket={selectedMarket}
           selectedDepartment={selectedDepartment}
+        />
+      )}
+
+      {/* Employee Details Modal */}
+      {selectedEmployee && (
+        <EmployeeDetails
+          selectedMitarbeiter={selectedEmployee}
+          mitarbeiterStats={[]}
+          detailUrlaube={monthlyUrlaube.filter(u => u.mitarbeiterId === selectedEmployee)}
+          onClose={() => {
+            setSelectedEmployee(null)
+            selectedEmployeeRef.current = null
+          }}
+          formatDate={(date) => new Date(date).toLocaleDateString('de-DE')}
+          calculateWorkingDays={(start, end) => Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1}
+          handleStatusChange={handleStatusChange}
+          onDelete={handleDelete}
+          busyId={busyId}
         />
       )}
     </div>

@@ -1,6 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from './contexts/AuthContext'
 import { YearProvider, useYear } from './contexts/YearContext'
+
+
+
 import { ErrorBoundary } from './components/error/ErrorBoundary'
 import { RouteErrorBoundary } from './components/error/RouteErrorBoundary'
 import { ComponentErrorBoundary } from './components/error/ComponentErrorBoundary'
@@ -10,6 +13,7 @@ import { UrlaubList } from './components/UrlaubList.tsx'
 import Stats from './components/Stats.tsx'
 import UrlaubBilanz from './components/UrlaubBilanz'
 import AdminMitarbeiterVerwaltung from './components/admin/user/UserList'
+
 import Settings from './components/Settings'
 import AdminUrlaubsUebersichtInline from './components/admin/overview/AdminUrlaubsUebersichtInline'
 import Pruefung from './components/vacation/Pruefung'
@@ -28,23 +32,45 @@ const getApiBaseUrl = () => {
 const API_BASE_URL = getApiBaseUrl()
 
 function AppContent() {
-  const { user, logout } = useAuth()
+  const { user, logout, getToken } = useAuth()
   const { selectedYear, setIsAdmin } = useYear()
+  
+
   const [urlaube, setUrlaube] = useState<Urlaub[]>([])
   const [budgets, setBudgets] = useState<UrlaubBudget[]>([])
-  const [activeTab, setActiveTab] = useState<'urlaub' | 'pruefung' | 'mitarbeiter' | 'settings'>('urlaub')
+  const [activeTab, setActiveTab] = useState<'urlaub' | 'pruefung' | 'mitarbeiter' | 'settings'>(() => {
+    // Nur aus sessionStorage lesen, dann Fallback
+    const saved = sessionStorage.getItem('activeTab')
+    return (saved as 'urlaub' | 'pruefung' | 'mitarbeiter' | 'settings') || 'urlaub'
+  })
+  
+
   
   // Scroll to top when changing tabs
   const handleTabChange = (tab: 'urlaub' | 'pruefung' | 'mitarbeiter' | 'settings') => {
-    console.log('Tab-Wechsel zu:', tab)
+    console.log('🚨 Tab-Wechsel zu:', tab)
+    console.trace('🚨 Tab-Wechsel aufgerufen von:')
     setActiveTab(tab)
+    sessionStorage.setItem('activeTab', tab)
     window.scrollTo({ top: 0, behavior: 'smooth' })
+    
+    // Daten neu laden wenn auf Übersicht-Tab gewechselt wird
+    if (tab === 'urlaub' && user?.role === 'admin') {
+      console.log('🔄 Lade Daten neu für Admin-Übersicht')
+      loadUrlaube()
+      loadBudgets()
+    }
   }
   
 
   const [isLoading, setIsLoading] = useState(false)
   const [search, setSearch] = useState('')
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [selectedMitarbeiter, setSelectedMitarbeiter] = useState<number | null>(() => {
+    // Modal-State überleben lassen auch bei Navigation
+    const saved = sessionStorage.getItem('selectedMitarbeiter');
+    return saved ? parseInt(saved) : null;
+  })
   const mobileMenuRef = useRef<HTMLDivElement>(null)
 
 
@@ -58,13 +84,44 @@ function AppContent() {
   }, [user, setIsAdmin])
 
   // Daten neu laden wenn Jahr sich ändert
+  const lastLoadedYearRef = useRef<number | null>(null);
   useEffect(() => {
-    if (user) {
-      console.log('📅 Jahr geändert, lade Daten neu für Jahr:', selectedYear)
-      loadUrlaube()
-      loadBudgets()
-    }
-  }, [selectedYear])
+    if (!user) return;
+    if (lastLoadedYearRef.current === selectedYear) return;
+    lastLoadedYearRef.current = selectedYear;
+    console.log('📅 Jahr geändert, lade Daten neu für Jahr:', selectedYear);
+    loadUrlaube();
+    loadBudgets();
+  }, [user, selectedYear])
+
+  // Event-Listener für Statusänderungen von der Prüfungsseite
+  useEffect(() => {
+    const handleUrlaubStatusChanged = async (event: Event) => {
+      const customEvent = event as CustomEvent;
+      console.log('🔄 Statusänderung erkannt:', customEvent.detail);
+      console.log('🔄 Lade Daten neu...');
+      
+      try {
+        await loadUrlaube();
+        await loadBudgets();
+        console.log('✅ Daten erfolgreich neu geladen');
+        
+        // Force re-render der Admin-Übersicht
+        setUrlaube(prev => [...prev]);
+        
+      } catch (error) {
+        console.error('❌ Fehler beim Neuladen der Daten:', error);
+      }
+    };
+
+    window.addEventListener('urlaubStatusChanged', handleUrlaubStatusChanged);
+    
+    return () => {
+      window.removeEventListener('urlaubStatusChanged', handleUrlaubStatusChanged);
+    };
+  }, []);
+
+  // URL-Synchronisation entfernt - nur sessionStorage verwenden
 
   const loadUrlaube = async () => {
     if (!user) return
@@ -72,7 +129,7 @@ function AppContent() {
     try {
       setIsLoading(true)
       const token = localStorage.getItem('urlaub_token')
-      const response = await fetch(`${API_BASE_URL}/urlaub`, {
+      const response = await fetch(`${API_BASE_URL}/urlaub?t=${Date.now()}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -278,10 +335,9 @@ function AppContent() {
             
             {/* Zentrierte Überschrift */}
             <div className="flex-1 text-center">
-              <h1 className="text-3xl md:text-4xl font-extrabold text-base-content tracking-tight">Urlaubsverwaltung</h1>
+              <h1 className="text-3xl md:text-4xl font-extrabold text-base-content tracking-tight">Urlaubsmanager {selectedYear}</h1>
               <p className="text-base md:text-lg text-base-content/70 mt-1">
                 Willkommen, {user.fullName}
-                <span className="ml-2 badge badge-secondary badge-lg">📅 {selectedYear}</span>
               </p>
             </div>
             
@@ -313,12 +369,14 @@ function AppContent() {
             <button
               onClick={() => handleTabChange('urlaub')}
               className={`btn join-item btn-sm md:btn-md normal-case ${activeTab === 'urlaub' ? 'btn-primary' : 'btn-outline'}`}
-            >Urlaubsanträge</button>
-            {/* Änderung: Prüfung-Tab hinzugefügt. Grund: Neue Seite für Prüfungsfunktionen */}
-            <button
-              onClick={() => handleTabChange('pruefung')}
-              className={`btn join-item btn-sm md:btn-md normal-case ${activeTab === 'pruefung' ? 'btn-primary' : 'btn-outline'}`}
-            >Prüfung</button>
+            >Übersicht</button>
+
+            {(user.role === 'admin' || user.role === 'manager') && (
+              <button
+                onClick={() => handleTabChange('pruefung')}
+                className={`btn join-item btn-sm md:btn-md normal-case ${activeTab === 'pruefung' ? 'btn-primary' : 'btn-outline'}`}
+              >Prüfung</button>
+            )}
             {user.role === 'admin' && (
               <>
                 <button
@@ -328,7 +386,7 @@ function AppContent() {
                 <button
                   onClick={() => handleTabChange('settings')}
                   className={`btn join-item btn-sm md:btn-md normal-case ${activeTab === 'settings' ? 'btn-primary' : 'btn-outline'}`}
-                >⚙️ Einstellungen</button>
+                >Einstellungen</button>
               </>
             )}
           </div>
@@ -352,14 +410,17 @@ function AppContent() {
                       setIsMobileMenuOpen(false)
                     }}
                     className={`btn btn-sm w-full justify-start ${activeTab === 'urlaub' ? 'btn-primary' : 'btn-ghost'}`}
-                  >Urlaubsanträge</button>
-                  <button
-                    onClick={() => {
-                      handleTabChange('pruefung')
-                      setIsMobileMenuOpen(false)
-                    }}
-                    className={`btn btn-sm w-full justify-start ${activeTab === 'pruefung' ? 'btn-primary' : 'btn-ghost'}`}
-                  >📋 Prüfung</button>
+                  >Übersicht</button>
+
+                  {(user.role === 'admin' || user.role === 'manager') && (
+                    <button
+                      onClick={() => {
+                        handleTabChange('pruefung')
+                        setIsMobileMenuOpen(false)
+                      }}
+                      className={`btn btn-sm w-full justify-start ${activeTab === 'pruefung' ? 'btn-primary' : 'btn-ghost'}`}
+                    >Prüfung</button>
+                  )}
                   {user.role === 'admin' && (
                     <>
                       <button
@@ -368,14 +429,14 @@ function AppContent() {
                           setIsMobileMenuOpen(false)
                         }}
                         className={`btn btn-sm w-full justify-start ${activeTab === 'mitarbeiter' ? 'btn-primary' : 'btn-ghost'}`}
-                      >👥 Mitarbeiterverwaltung</button>
+                      >Mitarbeiterverwaltung</button>
                       <button
                         onClick={() => {
                           handleTabChange('settings')
                           setIsMobileMenuOpen(false)
                         }}
                         className={`btn btn-sm w-full justify-start ${activeTab === 'settings' ? 'btn-primary' : 'btn-ghost'}`}
-                      >⚙️ Einstellungen</button>
+                      >Einstellungen</button>
                     </>
                   )}
                   <div className="divider my-2"></div>
@@ -412,6 +473,57 @@ function AppContent() {
                     </div>
                   </ComponentErrorBoundary>
 
+                  {/* Button zum Löschen aller abgelehnten Urlaube */}
+                  <ComponentErrorBoundary name="Abgelehnte-Urlaube-Löschen">
+                    <div className="flex justify-end mb-4">
+                      <button
+                        onClick={async () => {
+                          const rejectedUrlaube = urlaube.filter(u => u.mitarbeiterId === user.id && u.status === 'rejected')
+                          if (rejectedUrlaube.length === 0) {
+                            alert('Es gibt keine abgelehnten Urlaube zum Löschen.')
+                            return
+                          }
+                          
+                          if (confirm(`Möchten Sie wirklich alle ${rejectedUrlaube.length} abgelehnten Urlaubsanträge löschen?`)) {
+                            setIsLoading(true)
+                            let deletedCount = 0
+                            
+                            for (const urlaub of rejectedUrlaube) {
+                              try {
+                                console.log('🗑️ Versuche Urlaub zu löschen:', urlaub.id, 'Status:', urlaub.status)
+                                const response = await fetch(`${API_BASE_URL}/urlaub/${urlaub.id}`, {
+                                  method: 'DELETE',
+                                  headers: {
+                                    'Authorization': `Bearer ${getToken()}`
+                                  }
+                                })
+                                console.log('🗑️ Response Status:', response.status, 'OK:', response.ok)
+                                
+                                if (!response.ok) {
+                                  const errorText = await response.text()
+                                  console.error('🗑️ API Fehler:', response.status, errorText)
+                                } else {
+                                  deletedCount++
+                                  console.log('✅ Urlaub erfolgreich gelöscht:', urlaub.id)
+                                }
+                              } catch (error) {
+                                console.error('❌ Netzwerk-Fehler beim Löschen von Urlaub:', urlaub.id, error)
+                              }
+                            }
+                            
+                            await loadUrlaube()
+                            setIsLoading(false)
+                            alert(`${deletedCount} abgelehnte Urlaubsanträge wurden erfolgreich gelöscht.`)
+                          }
+                        }}
+                        className="btn btn-outline btn-error btn-sm"
+                        disabled={isLoading || urlaube.filter(u => u.mitarbeiterId === user.id && u.status === 'rejected').length === 0}
+                      >
+                        🗑️ Alle abgelehnten Urlaube löschen
+                      </button>
+                    </div>
+                  </ComponentErrorBoundary>
+
                   {/* Statistiken - nur für normale Mitarbeiter */}
                   <ComponentErrorBoundary name="Urlaubsstatistiken">
                     <div className="card bg-base-100 shadow-xl border border-base-300 rounded-2xl">
@@ -432,51 +544,69 @@ function AppContent() {
                 <>
                   {/* Admin Urlaubsübersicht - Neue umfassende Komponente */}
                   <ComponentErrorBoundary name="Admin-Urlaubsübersicht">
-                    <AdminUrlaubsUebersichtInline allUrlaube={urlaube} />
+                    <AdminUrlaubsUebersichtInline 
+                      allUrlaube={urlaube.map(u => ({
+                        ...u,
+                        mitarbeiterId: parseInt(u.mitarbeiterId)
+                      }))} 
+                      onDataChange={() => {
+                        loadUrlaube();
+                        loadBudgets();
+                      }}
+                      selectedMitarbeiter={selectedMitarbeiter}
+                      setSelectedMitarbeiter={(id) => {
+                        setSelectedMitarbeiter(id);
+                        if (id === null) {
+                          sessionStorage.removeItem('selectedMitarbeiter');
+                        } else {
+                          sessionStorage.setItem('selectedMitarbeiter', String(id));
+                        }
+                      }}
+                    />
                   </ComponentErrorBoundary>
                 </>
               )}
 
-              {/* UrlaubList - für alle, aber mit unterschiedlichen Titeln */}
-              <ComponentErrorBoundary name="Urlaubsliste">
-                <div className="card bg-base-100 shadow-xl border border-base-300 rounded-2xl">
-                  <div className="card-body gap-4">
-                    <h2 className="card-title text-2xl md:text-3xl">
-                      {user.role === 'admin' ? '👥 Alle Mitarbeiter-Anträge' : '📋 Meine Urlaubsanträge'}
-                    </h2>
-                    <p className="text-base-content/70">
-                      {user.role === 'admin' 
-                        ? 'Verwalten Sie die Urlaubsanträge aller Mitarbeiter' 
-                        : 'Alle Ihre eingereichten Anträge'}
-                    </p>
-                    {/* Searchbar */}
-                    <div className="form-control">
-                      <label className="input input-bordered flex items-center gap-2 rounded-xl">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 opacity-70">
-                          <path fillRule="evenodd" d="M10.5 3.75a6.75 6.75 0 1 0 4.217 12.042l4.745 4.746a.75.75 0 1 0 1.06-1.06l-4.746-4.746A6.75 6.75 0 0 0 10.5 3.75Zm-5.25 6.75a5.25 5.25 0 1 1 10.5 0 5.25 5.25 0 0 1-10.5 0Z" clipRule="evenodd" />
-                        </svg>
-                        <input
-                          type="text"
-                          value={search}
-                          onChange={(e) => setSearch(e.target.value)}
-                          className="grow"
-                          placeholder={user.role === 'admin' 
-                            ? "Nach Mitarbeiter-Anträgen suchen (Name, Datum, Status)" 
-                            : "Nach Anträgen suchen (Datum, Status, Bemerkung)"}
-                        />
-                      </label>
+              {/* UrlaubList - nur für Mitarbeiter, nicht für Admins */}
+              {user.role !== 'admin' && (
+                <ComponentErrorBoundary name="Urlaubsliste">
+                  <div className="card bg-base-100 shadow-xl border border-base-300 rounded-2xl">
+                    <div className="card-body gap-4">
+                      <h2 className="card-title text-2xl md:text-3xl">
+                        📋 Meine Urlaubsanträge
+                      </h2>
+                      <p className="text-base-content/70">
+                        Alle Ihre eingereichten Anträge
+                      </p>
+                      {/* Searchbar */}
+                      <div className="form-control">
+                        <label className="input input-bordered flex items-center gap-2 rounded-xl">
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 opacity-70">
+                            <path fillRule="evenodd" d="M10.5 3.75a6.75 6.75 0 1 0 4.217 12.042l4.745 4.746a.75.75 0 1 0 1.06-1.06l-4.746-4.746A6.75 6.75 0 0 0 10.5 3.75Zm-5.25 6.75a5.25 5.25 0 1 1 10.5 0 5.25 5.25 0 0 1-10.5 0Z" clipRule="evenodd" />
+                          </svg>
+                          <input
+                            type="text"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            className="grow"
+                            placeholder="Nach Anträgen suchen (Datum, Status, Bemerkung)"
+                          />
+                        </label>
+                      </div>
+                      <UrlaubList
+                        urlaube={getFilteredUrlaube()}
+                      onDelete={deleteUrlaub}
+                      isAdmin={false}
+                      />
                     </div>
-                    <UrlaubList
-                      urlaube={getFilteredUrlaube()}
-                    onDelete={deleteUrlaub}
-                    isAdmin={user.role === 'admin'}
-                    />
                   </div>
-                </div>
-              </ComponentErrorBoundary>
+                </ComponentErrorBoundary>
+              )}
             </div>
           </RouteErrorBoundary>
         )}
+
+
 
         {/* Änderung: Prüfung-Tab-Inhalt hinzugefügt. Grund: Neue Prüfungsseite */}
         {activeTab === 'pruefung' && (
@@ -493,9 +623,7 @@ function AppContent() {
           <RouteErrorBoundary>
             <div className="space-y-8">
               <ComponentErrorBoundary name="Mitarbeiterverwaltung">
-                <AdminMitarbeiterVerwaltung 
-                  onClose={() => {}} 
-                />
+                <AdminMitarbeiterVerwaltung />
               </ComponentErrorBoundary>
             </div>
           </RouteErrorBoundary>

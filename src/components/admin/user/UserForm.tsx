@@ -127,8 +127,8 @@ export const UserForm: React.FC<UserFormProps> = ({
           min="20"
           max="40"
           className="input-modern"
-          value={userForm.urlaubsanspruch}
-          onChange={(e) => onFormChange({...userForm, urlaubsanspruch: parseInt(e.target.value)})}
+          value={userForm.urlaubsanspruch || ''}
+          onChange={(e) => onFormChange({...userForm, urlaubsanspruch: parseInt(e.target.value) || 25})}
           required
         />
       </div>

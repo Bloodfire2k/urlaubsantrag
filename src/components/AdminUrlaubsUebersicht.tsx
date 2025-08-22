@@ -104,7 +104,7 @@ const AdminUrlaubsUebersicht: React.FC = () => {
       const token = localStorage.getItem('urlaub_token')
       if (!token) return
 
-      // Lade alle Benutzer zuerst um ihre IDs zu bekommen
+      // Lade alle Benutzer zuerst um ihre IDs zu bekommen (nur aktive)
       const usersResponse = await fetch(`${API_BASE_URL}/users`, {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -113,7 +113,9 @@ const AdminUrlaubsUebersicht: React.FC = () => {
 
       if (usersResponse.ok) {
         const users = await usersResponse.json()
-        const budgetPromises = users.map(async (user: any) => {
+        // Filtere nur aktive Benutzer
+        const activeUsers = users.filter((user: any) => user.is_active !== false)
+        const budgetPromises = activeUsers.map(async (user: any) => {
           try {
             const budgetResponse = await fetch(`${API_BASE_URL}/urlaub/budget/${user.id}?jahr=${selectedYear}`, {
               headers: {

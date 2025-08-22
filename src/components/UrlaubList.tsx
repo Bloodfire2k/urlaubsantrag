@@ -72,7 +72,7 @@ export const UrlaubList: React.FC<UrlaubListProps> = ({ urlaube, onDelete, isAdm
                 {urlaub.status === 'rejected' && <div className="badge-modern badge-error-modern badge-lg">Abgelehnt</div>}
                 {urlaub.status === 'pending' && <div className="badge-modern badge-warning-modern badge-lg">Ausstehend</div>}
                 
-                {urlaub.status === 'pending' && (
+                {(urlaub.status === 'pending' || urlaub.status === 'rejected') && (
                   <button 
                     className="btn-modern btn-outline-modern btn-sm" 
                     onClick={() => {

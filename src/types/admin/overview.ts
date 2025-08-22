@@ -6,6 +6,8 @@ export interface Urlaub {
   endDatum: string
   status: 'pending' | 'approved' | 'rejected'
   createdAt: string
+  genehmigtVon?: string
+  genehmigtAm?: string
 }
 
 export interface UrlaubBudget {

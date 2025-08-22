@@ -53,12 +53,42 @@ export const useVacationCalendar = (
     )
   }, [urlaube, filteredEmployees, selectedMarket])
 
-  // Urlaubstage-Map für gefilterte Mitarbeiter
+  // Urlaubstage-Map für gefilterte Mitarbeiter (genehmigte und pending)
   const vacationDaysMap = useMemo(() => {
     const map = new Map<string, Set<string>>()
     
     filteredUrlaube.forEach(urlaub => {
       if (urlaub.status === 'rejected') return
+      
+      const employeeKey = urlaub.mitarbeiterId.toString()
+      if (!map.has(employeeKey)) {
+        map.set(employeeKey, new Set())
+      }
+      
+      const startDate = new Date(urlaub.startDatum)
+      const endDate = new Date(urlaub.endDatum)
+      const currentDate = new Date(startDate)
+      
+      while (currentDate <= endDate) {
+        const year = currentDate.getFullYear()
+        const month = String(currentDate.getMonth() + 1).padStart(2, '0')
+        const day = String(currentDate.getDate()).padStart(2, '0')
+        const dateStr = `${year}-${month}-${day}`
+        
+        map.get(employeeKey)!.add(dateStr)
+        currentDate.setDate(currentDate.getDate() + 1)
+      }
+    })
+    
+    return map
+  }, [filteredUrlaube])
+
+  // Abgelehnte Urlaubstage-Map für gefilterte Mitarbeiter
+  const rejectedVacationDaysMap = useMemo(() => {
+    const map = new Map<string, Set<string>>()
+    
+    filteredUrlaube.forEach(urlaub => {
+      if (urlaub.status !== 'rejected') return
       
       const employeeKey = urlaub.mitarbeiterId.toString()
       if (!map.has(employeeKey)) {
@@ -133,6 +163,47 @@ export const useVacationCalendar = (
     return vacationDaysMap.get(employeeKey)?.has(dateStr) || false
   }
 
+  const hasRejectedVacationOnDay = (employeeId: number, date: Date) => {
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    const dateStr = `${year}-${month}-${day}`
+    
+    const employeeKey = employeeId.toString()
+    return rejectedVacationDaysMap.get(employeeKey)?.has(dateStr) || false
+  }
+
+  const getVacationStatusOnDay = (employeeId: number, date: Date): 'pending' | 'approved' | null => {
+    // Finde alle Urlaube für diesen Mitarbeiter an diesem Tag
+    const urlaubeForDay = filteredUrlaube.filter(urlaub => {
+      if (urlaub.mitarbeiterId !== employeeId) return false
+      if (urlaub.status === 'rejected') return false
+      
+      const startDate = new Date(urlaub.startDatum)
+      const endDate = new Date(urlaub.endDatum)
+      const checkDate = new Date(date)
+      
+      // Setze alle Zeiten auf 00:00:00 für korrekte Datumsvergleiche
+      startDate.setHours(0, 0, 0, 0)
+      endDate.setHours(0, 0, 0, 0)
+      checkDate.setHours(0, 0, 0, 0)
+      
+      return checkDate >= startDate && checkDate <= endDate
+    })
+    
+    // Wenn mehrere Urlaube gefunden werden, nehme den mit der höchsten Priorität
+    // Priorität: approved > pending
+    if (urlaubeForDay.length === 0) return null
+    
+    const approvedUrlaub = urlaubeForDay.find(u => u.status === 'approved')
+    if (approvedUrlaub) return 'approved'
+    
+    const pendingUrlaub = urlaubeForDay.find(u => u.status === 'pending')
+    if (pendingUrlaub) return 'pending'
+    
+    return null
+  }
+
   const navigateMonth = (direction: 'prev' | 'next') => {
     const newDate = new Date(currentMonth)
     if (direction === 'prev') {
@@ -173,6 +244,8 @@ export const useVacationCalendar = (
     visibleEmployees,
     isHoliday,
     hasVacationOnDay,
+    hasRejectedVacationOnDay,
+    getVacationStatusOnDay,
     navigateMonth,
     toggleEmployeeVisibility
   }

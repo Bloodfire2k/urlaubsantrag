@@ -20,8 +20,11 @@ interface VacationCalendarProps {
   monthDays: Date[]
   isHoliday: (date: Date) => boolean
   hasVacationOnDay: (employeeId: number, date: Date) => boolean
+  hasRejectedVacationOnDay: (employeeId: number, date: Date) => boolean
+  getVacationStatusOnDay: (employeeId: number, date: Date) => 'pending' | 'approved' | null
   navigateMonth: (direction: 'prev' | 'next') => void
   toggleEmployeeVisibility: (employeeId: number) => void
+  handleEmployeeClick?: (employeeId: number) => void
 }
 
 export const VacationCalendar: React.FC<VacationCalendarProps> = ({
@@ -34,8 +37,11 @@ export const VacationCalendar: React.FC<VacationCalendarProps> = ({
   monthDays,
   isHoliday,
   hasVacationOnDay,
+  hasRejectedVacationOnDay,
+  getVacationStatusOnDay,
   navigateMonth,
-  toggleEmployeeVisibility
+  toggleEmployeeVisibility,
+  handleEmployeeClick
 }) => {
   if (!selectedMarket || !selectedDepartment || filteredEmployees.length === 0) {
     return null
@@ -92,7 +98,6 @@ export const VacationCalendar: React.FC<VacationCalendarProps> = ({
                         className="checkbox checkbox-sm"
                         checked={visibleEmployees.has(employee.id)}
                         onChange={() => toggleEmployeeVisibility(employee.id)}
-                        defaultChecked={true}
                       />
                       <span className="text-sm">{employee.fullName}</span>
                     </label>
@@ -225,16 +230,28 @@ export const VacationCalendar: React.FC<VacationCalendarProps> = ({
                 })
                 .map(employee => (
                 <tr key={employee.id} className="hover:bg-gray-50">
-                  <td className="border border-gray-400 p-2 font-medium bg-gray-50">{employee.fullName}</td>
+                  <td 
+                    className="border border-gray-400 p-2 font-medium bg-gray-50 cursor-pointer hover:bg-blue-50"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      handleEmployeeClick?.(employee.id)
+                    }}
+                  >
+                    {employee.fullName}
+                  </td>
                   {monthDays.map(day => {
                     const isSunday = day.getDay() === 0 // Nur Sonntag ist Wochenende
                     const isHolidayDay = isHoliday(day)
                     const hasVacation = hasVacationOnDay(employee.id, day)
+                    const hasRejectedVacation = hasRejectedVacationOnDay(employee.id, day)
+                    const vacationStatus = getVacationStatusOnDay(employee.id, day)
                     
                     let cellClass = 'text-center p-0 border border-gray-300'
                     let bgColor = ''
                     let textColor = 'black'
                     let cellContent = ''
+                    let additionalStyles = ''
                     
                     // Zuerst Feiertage und Sonntage prüfen (haben Vorrang)
                     if (isHolidayDay) {
@@ -246,11 +263,29 @@ export const VacationCalendar: React.FC<VacationCalendarProps> = ({
                       textColor = 'black'
                       cellContent = ''
                     }
-                    // Dann Urlaub (wird von Feiertagen/Sonntagen überlagert)
-                    else if (hasVacation) {
-                      bgColor = 'bg-green-400'
+                    // Dann abgelehnte Urlaube (rot mit Durchstreichung)
+                    else if (hasRejectedVacation) {
+                      bgColor = 'bg-red-400'
                       textColor = 'white'
                       cellContent = ''
+                      additionalStyles = 'line-through decoration-2 decoration-white'
+                    }
+                    // Dann Urlaube nach Status unterscheiden
+                    else if (hasVacation) {
+                      if (vacationStatus === 'approved') {
+                        bgColor = 'bg-green-400'
+                        textColor = 'white'
+                        cellContent = ''
+                      } else if (vacationStatus === 'pending') {
+                        bgColor = 'bg-orange-400'
+                        textColor = 'white'
+                        cellContent = ''
+                      } else {
+                        // Fallback für unbekannten Status
+                        bgColor = 'bg-green-400'
+                        textColor = 'white'
+                        cellContent = ''
+                      }
                     } else {
                       bgColor = 'bg-white'
                       textColor = 'black'
@@ -260,10 +295,12 @@ export const VacationCalendar: React.FC<VacationCalendarProps> = ({
                     return (
                       <td key={day.toISOString()} className={`${cellClass} ${bgColor}`}>
                         <div 
-                          className={`w-full h-8 flex items-center justify-center text-xs font-bold text-${textColor}`}
+                          className={`w-full h-8 flex items-center justify-center text-xs font-bold text-${textColor} ${additionalStyles}`}
                           title={
-                            hasVacation 
-                              ? 'Urlaub' 
+                            hasRejectedVacation
+                              ? 'Abgelehnter Urlaub'
+                              : hasVacation 
+                              ? (vacationStatus === 'approved' ? 'Genehmigter Urlaub' : 'Ausstehender Urlaub')
                               : isHolidayDay
                                 ? 'Feiertag'
                                 : isSunday 
@@ -315,7 +352,8 @@ export const VacationCalendar: React.FC<VacationCalendarProps> = ({
                         filteredEmployees
                           .filter(emp => visibleEmployees.has(emp.id))
                           .forEach(emp => {
-                            if (hasVacationOnDay(emp.id, day)) {
+                            // Nur genehmigte/pending Urlaube zählen, keine abgelehnten
+                            if (hasVacationOnDay(emp.id, day) && !hasRejectedVacationOnDay(emp.id, day)) {
                               employeesOnVacation.set(emp.id, emp.fullName);
                             }
                           });
@@ -357,10 +395,20 @@ export const VacationCalendar: React.FC<VacationCalendarProps> = ({
         </div>
 
         {/* Legende */}
-        <div className="flex justify-center gap-6 mt-6 text-sm">
+        <div className="flex justify-center gap-6 mt-6 text-sm flex-wrap">
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 bg-green-400 border border-gray-400"></div>
-            <span>Urlaub</span>
+            <span>Genehmigter Urlaub</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-orange-400 border border-gray-400"></div>
+            <span>Ausstehender Urlaub</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-red-400 border border-gray-400 flex items-center justify-center">
+              <div className="w-full h-0.5 bg-white"></div>
+            </div>
+            <span>Abgelehnt</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 bg-orange-300 border border-gray-400 flex items-center justify-center text-xs font-bold">F</div>

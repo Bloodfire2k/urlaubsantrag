@@ -523,6 +523,30 @@ export class DatabaseManager {
     return budget
   }
 
+  updateUrlaubBudget(budgetId: number, updatedBudget: UrlaubBudget): boolean {
+    try {
+      const budgetIndex = this.urlaubBudgets.findIndex(b => b.id === budgetId)
+      if (budgetIndex !== -1) {
+        // Nur jahresanspruch ändern, andere Werte beibehalten
+        const current = this.urlaubBudgets[budgetIndex]
+        this.urlaubBudgets[budgetIndex] = {
+          ...current,
+          jahresanspruch: updatedBudget.jahresanspruch,
+          updated_at: new Date().toISOString()
+        }
+        this.saveTable('urlaub_budgets', this.urlaubBudgets)
+        console.log(`✅ Budget ID ${budgetId} erfolgreich aktualisiert`)
+        return true
+      } else {
+        console.error(`❌ Budget ID ${budgetId} nicht gefunden`)
+        return false
+      }
+    } catch (error) {
+      console.error('❌ Fehler beim Aktualisieren des Budgets:', error)
+      return false
+    }
+  }
+
   addUrlaubAntrag(antrag: Omit<UrlaubAntrag, 'id' | 'created_at' | 'updated_at'>): UrlaubAntrag {
     const newAntrag: UrlaubAntrag = {
       ...antrag,
@@ -539,6 +563,19 @@ export class DatabaseManager {
     return this.urlaubAntraege
   }
 
+  updateUrlaubAntrag(id: number, updates: Partial<UrlaubAntrag>): UrlaubAntrag | undefined {
+    const index = this.urlaubAntraege.findIndex(a => a.id === id)
+    if (index === -1) return undefined
+    
+    this.urlaubAntraege[index] = {
+      ...this.urlaubAntraege[index],
+      ...updates,
+      updated_at: new Date().toISOString()
+    }
+    this.saveAllData()
+    return this.urlaubAntraege[index]
+  }
+
   deleteUrlaubAntrag(id: number): boolean {
     const index = this.urlaubAntraege.findIndex(a => a.id === id)
     if (index === -1) return false
@@ -547,24 +584,23 @@ export class DatabaseManager {
     return true
   }
 
-  updateUser(id: number, updates: Partial<User>): User | undefined {
-    const index = this.users.findIndex(u => u.id === id)
-    if (index === -1) return undefined
-    
-    this.users[index] = {
-      ...this.users[index],
-      ...updates,
-      updated_at: new Date().toISOString()
-    }
-    this.saveAllData()
-    return this.users[index]
-  }
+
 
   deleteUser(id: number): boolean {
     const index = this.users.findIndex(u => u.id === id)
     if (index === -1) return false
     
-    // Benutzer dauerhaft entfernen
+    // Alle zugehörigen Daten löschen (Cascade Delete)
+    // 1. Urlaubsanträge löschen
+    this.urlaubAntraege = this.urlaubAntraege.filter(antrag => antrag.mitarbeiterId !== id)
+    
+    // 2. Urlaubsbudgets löschen
+    this.urlaubBudgets = this.urlaubBudgets.filter(budget => budget.mitarbeiterId !== id)
+    
+    // 3. Audit-Logs des Benutzers löschen
+    this.auditLogs = this.auditLogs.filter(log => log.user_id !== id)
+    
+    // 4. Benutzer dauerhaft entfernen
     this.users.splice(index, 1)
     this.saveAllData()
     return true

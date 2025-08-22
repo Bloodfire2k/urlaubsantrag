@@ -6,6 +6,15 @@ export default defineConfig({
   server: {
     host: '0.0.0.0', // Macht Server für alle Netzwerkinterfaces verfügbar
     port: 3000,
-    open: true
+    open: true,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3002',
+        changeOrigin: true
+      }
+    },
+    watch: {
+      ignored: ['**/data/**'] // Verhindert Vite-Reload bei JSON-Datei-Änderungen
+    }
   }
 })

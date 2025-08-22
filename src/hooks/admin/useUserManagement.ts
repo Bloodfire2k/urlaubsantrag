@@ -1,8 +1,12 @@
 import { useState, useEffect } from 'react'
 import { User, Market, UserFormData, Toast } from '../../types/admin/user'
 import { userService } from '../../services/admin/userService'
+import { useAuth } from '../../contexts/AuthContext'
+import { useYear } from '../../contexts/YearContext'
 
 export const useUserManagement = () => {
+  const { getToken } = useAuth()
+  const { selectedYear } = useYear()
   const [users, setUsers] = useState<User[]>([])
   const [markets] = useState<Market[]>([
     { id: 2, name: 'E-Center', address: '', phone: '', email: '' },
@@ -13,6 +17,7 @@ export const useUserManagement = () => {
   const [editingUser, setEditingUser] = useState<User | null>(null)
   const [showEditForm, setShowEditForm] = useState(false)
   const [toast, setToast] = useState<Toast | null>(null)
+  const [searchTerm, setSearchTerm] = useState('')
 
   // Formular-Zustände
   const [userForm, setUserForm] = useState<UserFormData>({
@@ -28,9 +33,9 @@ export const useUserManagement = () => {
   })
 
   // Toast-Funktion
-  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+  const showToast = (message: string, type: 'success' | 'error' = 'success', duration: number = 5000) => {
     setToast({ message, type })
-    setTimeout(() => setToast(null), 5000)
+    setTimeout(() => setToast(null), duration)
   }
 
   // Benutzer laden
@@ -38,7 +43,15 @@ export const useUserManagement = () => {
     setLoading(true)
     try {
       const users = await userService.fetchUsers()
-      setUsers(users)
+      // Nach Nachnamen sortieren
+      const sortedUsers = users.sort((a, b) => {
+        const namePartsA = a.fullName.trim().split(' ')
+        const namePartsB = b.fullName.trim().split(' ')
+        const nachNameA = namePartsA.length > 1 ? namePartsA[namePartsA.length - 1] : a.fullName
+        const nachNameB = namePartsB.length > 1 ? namePartsB[namePartsB.length - 1] : b.fullName
+        return nachNameA.localeCompare(nachNameB, 'de', { sensitivity: 'base' })
+      })
+      setUsers(sortedUsers)
     } catch (error) {
       console.error('Fehler beim Laden der Benutzer:', error)
     } finally {
@@ -81,19 +94,23 @@ export const useUserManagement = () => {
     // Vollständigen Namen aktualisieren
     newForm.fullName = `${newForm.firstName} ${newForm.lastName}`.trim()
     
-    // Automatisch Benutzername und Passwort generieren
-    const credentials = generateCredentials(newForm.firstName, newForm.lastName)
-    newForm.username = credentials.username
-    newForm.password = credentials.password
+    // Nur bei CREATE-Modus automatisch Benutzername und Passwort generieren
+    if (!editingUser) {
+      const credentials = generateCredentials(newForm.firstName, newForm.lastName)
+      newForm.username = credentials.username
+      newForm.password = credentials.password
+    }
     
     setUserForm(newForm)
   }
 
   // Benutzer bearbeiten
-  const handleEditUser = (user: User) => {
+  const handleEditUser = async (user: User) => {
     setEditingUser(user)
     const nameParts = user.fullName.split(' ')
-    setUserForm({
+    
+    // Erst das Formular mit Standardwerten setzen
+    const initialForm = {
       firstName: nameParts[0] || '',
       lastName: nameParts.slice(1).join(' ') || '',
       username: user.username,
@@ -102,23 +119,90 @@ export const useUserManagement = () => {
       role: user.role,
       marketId: user.market_id,
       department: user.department || '',
-      urlaubsanspruch: 36
-    })
+      urlaubsanspruch: 25 // Standardwert
+    }
+    setUserForm(initialForm)
     setShowEditForm(true)
+    
+    // Dann asynchron das Budget laden und das Formular aktualisieren
+    try {
+      console.log('Lade Budget für User:', user.id, 'Jahr:', selectedYear)
+      const response = await fetch(`/api/urlaub/budget/all?jahr=${selectedYear}&t=${Date.now()}`, {
+        headers: {
+          'Authorization': `Bearer ${getToken()}`,
+          'Cache-Control': 'no-cache'
+        }
+      })
+      if (response.ok) {
+        const budgetData = await response.json()
+        console.log('Budget-Daten erhalten:', budgetData)
+        const userBudget = budgetData.budgets?.find((b: any) => b.mitarbeiterId === user.id)
+        console.log('User-Budget gefunden:', userBudget)
+        if (userBudget && userBudget.jahresanspruch) {
+          const urlaubsanspruch = parseInt(userBudget.jahresanspruch) || 25
+          console.log('Urlaubsanspruch gesetzt auf:', urlaubsanspruch)
+          // Formular mit korrektem Budget-Wert aktualisieren
+          setUserForm(prev => ({ ...prev, urlaubsanspruch }))
+        }
+      }
+    } catch (error) {
+      console.error('Fehler beim Laden des Urlaubsbudgets:', error)
+    }
   }
 
-  // Passwort zurücksetzen
+  // Passwort zurücksetzen (ohne Modal)
   const handleResetPassword = async (userId: number) => {
-    if (!confirm('Möchten Sie das Passwort für diesen Mitarbeiter zurücksetzen?')) {
+    const user = users.find(u => u.id === userId)
+    if (!user) return
+
+    if (!confirm(`Möchten Sie das Passwort für "${user.fullName}" zurücksetzen?`)) {
       return
     }
 
     try {
       const newPassword = await userService.resetPassword(userId)
-      showToast(`Passwort erfolgreich zurückgesetzt! Neues Passwort: ${newPassword}`, 'success')
+      
+      // Passwort in die Zwischenablage kopieren
+      try {
+        await navigator.clipboard.writeText(newPassword)
+        showToast(`✅ Passwort für "${user.fullName}" erfolgreich zurückgesetzt!\n\n🔑 Neues Passwort: ${newPassword}\n\n📋 Das Passwort wurde automatisch in die Zwischenablage kopiert.`, 'success', 15000)
+      } catch (clipboardError) {
+        // Fallback wenn Clipboard API nicht verfügbar ist
+        showToast(`✅ Passwort für "${user.fullName}" erfolgreich zurückgesetzt!\n\n🔑 Neues Passwort: ${newPassword}\n\n⚠️ Bitte kopieren Sie das Passwort manuell!`, 'success', 15000)
+      }
     } catch (error) {
       console.error('Fehler beim Passwort-Reset:', error)
-      showToast('Fehler beim Zurücksetzen des Passworts', 'error')
+      showToast(`❌ Fehler beim Zurücksetzen des Passworts für "${user.fullName}"`, 'error')
+    }
+  }
+
+  // Passwort zurücksetzen (für Modal)
+  const resetPasswordForModal = async (userId: number) => {
+    const user = users.find(u => u.id === userId)
+    if (!user) return null
+
+    try {
+      const newPassword = await userService.resetPassword(userId)
+      return { user, newPassword }
+    } catch (error) {
+      console.error('Fehler beim Passwort-Reset:', error)
+      showToast(`❌ Fehler beim Zurücksetzen des Passworts für "${user.fullName}"`, 'error')
+      throw error
+    }
+  }
+
+  // Eigenes Passwort setzen
+  const setCustomPassword = async (userId: number, password: string) => {
+    const user = users.find(u => u.id === userId)
+    if (!user) return
+
+    try {
+      await userService.setCustomPassword(userId, password)
+      showToast(`✅ Passwort für "${user.fullName}" erfolgreich gesetzt!`, 'success')
+    } catch (error) {
+      console.error('Fehler beim Setzen des Passworts:', error)
+      showToast(`❌ Fehler beim Setzen des Passworts für "${user.fullName}"`, 'error')
+      throw error
     }
   }
 
@@ -139,10 +223,50 @@ export const useUserManagement = () => {
       }
 
       await userService.updateUser(editingUser.id, updateData)
+      
+      // Urlaubsbudget aktualisieren wenn sich der Anspruch geändert hat
+      try {
+        console.log('Aktualisiere Budget für User:', editingUser.id, 'auf', userForm.urlaubsanspruch, 'Tage')
+        const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3002' : `http://${window.location.hostname}:3002`
+        const response = await fetch(`${apiUrl}/api/urlaub/budget/${editingUser.id}/${selectedYear}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${getToken()}`
+          },
+          body: JSON.stringify({
+            jahresanspruch: userForm.urlaubsanspruch
+          })
+        })
+        
+        if (!response.ok) {
+          const errorText = await response.text()
+          console.error('Budget-Update fehlgeschlagen:', response.status, errorText)
+        } else {
+          const result = await response.json()
+          console.log('Budget erfolgreich aktualisiert:', result)
+          
+          // Frisch nachladen zur Bestätigung
+          const freshResponse = await fetch(`${apiUrl}/api/urlaub/budget/${editingUser.id}/${selectedYear}`, {
+            headers: {
+              'Authorization': `Bearer ${getToken()}`,
+              'Cache-Control': 'no-cache'
+            }
+          })
+          if (freshResponse.ok) {
+            const freshBudget = await freshResponse.json()
+            console.log('Frisch geladenes Budget:', freshBudget)
+          }
+        }
+      } catch (budgetError) {
+        console.error('Fehler beim Aktualisieren des Urlaubsbudgets:', budgetError)
+        // Nicht als kritischen Fehler behandeln
+      }
+      
       showToast('Mitarbeiter erfolgreich aktualisiert!', 'success')
       setShowEditForm(false)
       setEditingUser(null)
-      fetchUsers()
+      await fetchUsers() // Await hinzugefügt
     } catch (error) {
       console.error('Fehler beim Aktualisieren des Mitarbeiters:', error)
       showToast('Fehler beim Aktualisieren des Mitarbeiters', 'error')
@@ -216,8 +340,15 @@ export const useUserManagement = () => {
     }
   }
 
+  // Gefilterte Benutzer basierend auf Suchterm
+  const filteredUsers = users.filter(user =>
+    user.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    user.email.toLowerCase().includes(searchTerm.toLowerCase())
+  )
+
   return {
-    users,
+    users: filteredUsers,
     markets,
     loading,
     showCreateForm,
@@ -227,11 +358,16 @@ export const useUserManagement = () => {
     showEditForm,
     setShowEditForm,
     toast,
+    setToast,
     userForm,
     setUserForm,
+    searchTerm,
+    setSearchTerm,
     handleNameChange,
     handleEditUser,
     handleResetPassword,
+    resetPasswordForModal,
+    setCustomPassword,
     handleUpdateUser,
     handleCreateUser,
     handleToggleUserStatus,

@@ -54,6 +54,7 @@ export const useVacationData = (token: string | null, selectedYear: number) => {
     markets,
     users,
     urlaube,
+    setUrlaube,
     loading
   }
 }

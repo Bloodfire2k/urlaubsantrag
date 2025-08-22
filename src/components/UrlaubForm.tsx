@@ -34,6 +34,9 @@ const UrlaubForm: React.FC<UrlaubFormProps> = ({ onSubmit, existingUrlaube = [] 
     const newEndDate = new Date(newEnd)
     
     for (const urlaub of existingUrlaube) {
+      // Nur eigene Urlaube prüfen
+      if (urlaub.mitarbeiterId.toString() !== user?.id) continue
+      
       // Nur genehmigte oder ausstehende Anträge prüfen
       if (urlaub.status === 'rejected') continue
       
@@ -133,7 +136,6 @@ const UrlaubForm: React.FC<UrlaubFormProps> = ({ onSubmit, existingUrlaube = [] 
                 max={`${selectedYear}-12-31`}
                 required
                 className="grow bg-transparent"
-                defaultValue={`${selectedYear}-01-01`}
               />
             </label>
           </div>
