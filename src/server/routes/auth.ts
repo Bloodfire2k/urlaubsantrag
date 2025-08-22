@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express'
-import bcrypt from 'bcryptjs'
+import { password } from '../utils/password'
 import jwt from 'jsonwebtoken'
 import { db } from '../database'
 
@@ -29,7 +29,7 @@ router.post('/login', async (req: Request, res: Response) => {
     }
 
     // Passwort überprüfen
-    const isValidPassword = await bcrypt.compare(password, user.password_hash)
+    const isValidPassword = await password.compare(password, user.password_hash)
     
     if (!isValidPassword) {
       return res.status(401).json({ 
@@ -150,7 +150,7 @@ router.post('/register', async (req: Request, res: Response) => {
     }
 
     // Passwort hashen
-    const passwordHash = await bcrypt.hash(password, 12)
+    const passwordHash = await password.hash(password, 12)
 
     // Neuen Benutzer erstellen
     const newUser = db.addUser({
@@ -276,13 +276,13 @@ router.post('/change-password', async (req: Request, res: Response) => {
     }
 
     // Aktuelles Passwort überprüfen
-    const isValidPassword = await bcrypt.compare(currentPassword, user.password_hash)
+    const isValidPassword = await password.compare(currentPassword, user.password_hash)
     if (!isValidPassword) {
       return res.status(400).json({ error: 'Aktuelles Passwort ist falsch' })
     }
 
     // Neues Passwort hashen
-    const newPasswordHash = await bcrypt.hash(newPassword, 12)
+          const newPasswordHash = await password.hash(newPassword, 12)
 
     // Passwort aktualisieren
     const updatedUser = db.updateUser(user.id, { password_hash: newPasswordHash })

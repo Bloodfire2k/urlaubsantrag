@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express'
 import jwt from 'jsonwebtoken'
-import bcrypt from 'bcryptjs' // Änderung: bcryptjs Import hinzugefügt. Grund: Passwort-Hashing für Reset-Funktion
+import { password } from '../utils/password'
 import { db } from '../database'
 
 const router = Router()
@@ -464,7 +464,7 @@ router.put('/:id/password', authenticateToken, requireAdmin, async (req: Request
     }
 
     // Passwort hashen
-    const hashedPassword = await bcrypt.hash(password, 12)
+    const hashedPassword = await password.hash(password, 12)
 
     // Passwort in JSON-Datenbank aktualisieren
     const updatedUser = db.updateUser(userId, { 

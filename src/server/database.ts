@@ -1,6 +1,6 @@
 import fs from 'fs'
 import path from 'path'
-import bcrypt from 'bcryptjs'
+import { password } from './utils/password'
 
 interface User {
   id: number
@@ -181,7 +181,7 @@ export class DatabaseManager {
       this.markets.push(market1, market2)
 
       // Erstelle Admin-Benutzer
-      const adminPasswordHash = await bcrypt.hash('admin123', 12)
+      const adminPasswordHash = await password.hash('admin123', 12)
       const admin: User = {
         id: this.nextIds.users++,
         username: 'admin',
@@ -196,9 +196,9 @@ export class DatabaseManager {
       }
 
       // Erstelle Demo-Mitarbeiter (Passwörter gemäß Login-Hinweis)
-      const maxPasswordHash = await bcrypt.hash('max123', 12)
-      const annaPasswordHash = await bcrypt.hash('anna123', 12)
-      const employeePasswordHash = await bcrypt.hash('demo123', 12) // für Manager-Demos
+              const maxPasswordHash = await password.hash('max123', 12)
+        const annaPasswordHash = await password.hash('anna123', 12)
+        const employeePasswordHash = await password.hash('demo123', 12) // für Manager-Demos
       const max: User = {
         id: this.nextIds.users++,
         username: 'max.mustermann',
@@ -336,18 +336,18 @@ export class DatabaseManager {
     const anna = this.users.find(u => u.username === 'anna.schmidt')
 
     if (max) {
-      const ok = await bcrypt.compare('max123', max.password_hash).catch(() => false)
+      const ok = await password.compare('max123', max.password_hash).catch(() => false)
       if (!ok) {
-        max.password_hash = await bcrypt.hash('max123', 12)
+        max.password_hash = await password.hash('max123', 12)
         max.updated_at = new Date().toISOString()
         changed = true
       }
     }
 
     if (anna) {
-      const ok = await bcrypt.compare('anna123', anna.password_hash).catch(() => false)
+      const ok = await password.compare('anna123', anna.password_hash).catch(() => false)
       if (!ok) {
-        anna.password_hash = await bcrypt.hash('anna123', 12)
+        anna.password_hash = await password.hash('anna123', 12)
         anna.updated_at = new Date().toISOString()
         changed = true
       }
