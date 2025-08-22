@@ -24,9 +24,9 @@ import { Urlaub, UrlaubBudget, convertUrlaubFromBackend, convertUrlaubBudgetFrom
 const getApiBaseUrl = () => {
   const hostname = window.location.hostname
   if (hostname === 'localhost' || hostname === '127.0.0.1') {
-    return 'http://localhost:3002/api' // Änderung: Port auf 3002 geändert. Grund: Backend läuft jetzt auf Port 3002
-  } else {
-    return `http://${hostname}:3002/api`
+      return 'http://localhost:3001/api' // Änderung: Port auf 3001 geändert. Grund: Backend läuft jetzt auf Port 3001
+} else {
+  return `http://${hostname}:3001/api`
   }
 }
 const API_BASE_URL = getApiBaseUrl()

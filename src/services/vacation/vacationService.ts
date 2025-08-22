@@ -4,9 +4,9 @@ import { Market, User, Urlaub } from '../../types/vacation'
 const getApiBaseUrl = () => {
   const hostname = window.location.hostname
   if (hostname === 'localhost' || hostname === '127.0.0.1') {
-    return 'http://localhost:3002/api'
-  } else {
-    return `http://${hostname}:3002/api`
+      return 'http://localhost:3001/api'
+} else {
+  return `http://${hostname}:3001/api`
   }
 }
 
