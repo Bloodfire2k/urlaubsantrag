@@ -1,5 +1,17 @@
 [
   {
+    "id": 1,
+    "username": "testadmin",
+    "email": "testadmin@unternehmen.de",
+    "fullName": "Test Administrator",
+    "password_hash": "$2a$12$jNzbALnZcFwqfiZZalig5O8JfuIxtKFoF80B0c/JE/JRFdG762ffW",
+    "role": "admin",
+    "market_id": 2,
+    "is_active": true,
+    "created_at": "2025-08-13T12:08:15.357Z",
+    "updated_at": "2025-08-21T15:34:48.283Z"
+  },
+  {
     "id": 2,
     "username": "admin",
     "email": "admin@unternehmen.de",
