@@ -71,8 +71,8 @@ COPY --from=builder /app/src/utils ./src/utils
 
 # Import Script und Startup Script kopieren
 COPY --from=builder /app/scripts/import-json.ts ./scripts/
-COPY --from=builder /app/scripts/docker-startup.sh ./scripts/
-RUN chmod +x ./scripts/docker-startup.sh
+# COPY --from=builder /app/scripts/docker-startup.sh ./scripts/  # Diese Datei existiert nicht
+# RUN chmod +x ./scripts/docker-startup.sh  # Nicht mehr nötig
 
 # SQLite Datenbank-Verzeichnis erstellen
 RUN mkdir -p /app/data && \
@@ -97,6 +97,6 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
 # Grund: Verhindert Zombie-Prozesse und ermöglicht graceful shutdown
 ENTRYPOINT ["dumb-init", "--"]
 
-# Änderung: Startup Script verwenden für DB-Setup
-# Grund: Automatische Migration und Demo-Daten beim Container-Start
-CMD ["./scripts/docker-startup.sh"]
+# Änderung: Direkt npm run start verwenden
+# Grund: Kein Startup-Script nötig, App startet direkt
+CMD ["npm", "run", "start"]
