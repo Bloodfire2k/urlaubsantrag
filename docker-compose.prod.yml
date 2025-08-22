@@ -7,12 +7,19 @@ services:
       dockerfile: Dockerfile
     container_name: urlaubsantrag-app-prod
     restart: unless-stopped
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.urlaub.rule=Host(`urlaub.myfire.cloud`)
+      - traefik.http.routers.urlaub.entryPoints=https
+      - traefik.http.routers.urlaub.tls.certresolver=letsencrypt
+      - traefik.http.services.urlaub.loadbalancer.server.port=3001
     environment:
       NODE_ENV: production
       DATABASE_URL: file:/app/data/production.db
       JWT_SECRET: your-super-secret-jwt-key-2024-production
       DB_TYPE: sqlite
       PORT: "3001"
+      ALLOWED_ORIGIN: "https://urlaub.myfire.cloud"
     volumes:
       - sqlite_data:/app/data
 

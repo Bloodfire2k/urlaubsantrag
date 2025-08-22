@@ -18,7 +18,9 @@ import { urlaubRoutes } from './routes/urlaub'
 import { marktRoutes } from './routes/markets'
 
 const app = express()
-const PORT = process.env.PORT || 3000
+const PORT = Number(process.env.PORT) || 3001
+
+app.set('trust proxy', 1) // wichtig hinter Traefik
 
 // Sicherheits-Middleware
 app.use(helmet({
@@ -33,10 +35,8 @@ app.use(helmet({
   }
 }))
 
-app.use(cors({
-  origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'],
-  credentials: true
-}))
+const allowedOrigin = process.env.ALLOWED_ORIGIN || 'https://urlaub.myfire.cloud'
+app.use(cors({ origin: allowedOrigin, credentials: true }))
 
 // Rate Limiting für Production
 const limiter = rateLimit({
@@ -76,6 +76,8 @@ app.use('/api/urlaub', urlaubRoutes)
 app.use('/api/markets', marktRoutes)
 
 // Health Check
+app.get('/health', (_req, res) => res.status(200).send('OK'))
+
 app.get('/api/health', async (req, res) => {
   try {
     res.json({ 
@@ -120,14 +122,8 @@ process.on('SIGTERM', async () => {
 })
 
 // Server starten
-app.listen(Number(PORT), '0.0.0.0', async () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Production Server läuft auf Port ${PORT}`)
-  console.log(`🌍 Umgebung: ${process.env.NODE_ENV}`)
-  console.log(`💾 Datenbank: JSON-DB`)
-  
-  await initDatabase()
-  
-  console.log(`✅ Urlaubsantrag-System bereit!`)
 })
 
 export { app }
