@@ -24,6 +24,7 @@
     "db:studio": "npx prisma studio",
     "db:generate": "npx prisma generate",
     "server:prisma": "tsx src/server/index-prisma.ts",
+    "start": "tsx src/server/production.ts",
     "start:prod": "tsx src/server/production.ts",
     "docker:build": "docker build -t urlaubsantrag .",
     "docker:up": "docker-compose up -d",
