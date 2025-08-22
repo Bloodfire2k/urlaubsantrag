@@ -13,9 +13,9 @@ import path from 'path'
 
 // Routen importieren
 import { authRoutes } from './routes/auth'
-import { userRoutes } from './routes/users'
-import { urlaubRoutes } from './routes/urlaub'
-import { marktRoutes } from './routes/markets'
+import { usersPrismaRoutes } from './routes/users-prisma'
+import { urlaubPrismaRoutes } from './routes/urlaub-prisma'
+import { marketsPrismaRoutes } from './routes/markets-prisma'
 
 const app = express()
 const PORT = process.env.PORT || 3000
@@ -69,11 +69,11 @@ async function initDatabase() {
   }
 }
 
-// API Routes - JSON-basierte Endpunkte
+// API Routes - Prisma-basierte Endpunkte
 app.use('/api/auth', authRoutes)
-app.use('/api/users', userRoutes)
-app.use('/api/urlaub', urlaubRoutes) 
-app.use('/api/markets', marktRoutes)
+app.use('/api/users', usersPrismaRoutes)
+app.use('/api/urlaub', urlaubPrismaRoutes) 
+app.use('/api/markets', marketsPrismaRoutes)
 
 // Health Check
 app.get('/api/health', async (req, res) => {
