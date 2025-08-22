@@ -2,17 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Calendar, Clock, CheckCircle, AlertCircle, User, ChevronRight, Users } from 'lucide-react'
 import { useYear } from '../contexts/YearContext'
 import { calculateWorkingDays } from '../utils/vacationCalculator'
-
-// Dynamische API-URL für lokales Netzwerk
-const getApiBaseUrl = () => {
-  const hostname = window.location.hostname
-  if (hostname === 'localhost' || hostname === '127.0.0.1') {
-      return 'http://localhost:3001/api' // Änderung: Port auf 3001 geändert. Grund: Backend läuft jetzt auf Port 3001
-} else {
-  return `https://${hostname}:3001/api`
-  }
-}
-const API_BASE_URL = getApiBaseUrl()
+import { apiFetch } from '../../lib/api'
 
 interface Urlaub {
   id: number
@@ -83,7 +73,7 @@ const AdminUrlaubsUebersicht: React.FC = () => {
       const token = localStorage.getItem('urlaub_token')
       if (!token) return
 
-      const response = await fetch(`${API_BASE_URL}/urlaub?jahr=${selectedYear}`, {
+      const response = await apiFetch(`/urlaub?jahr=${selectedYear}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -105,7 +95,7 @@ const AdminUrlaubsUebersicht: React.FC = () => {
       if (!token) return
 
       // Lade alle Benutzer zuerst um ihre IDs zu bekommen (nur aktive)
-      const usersResponse = await fetch(`${API_BASE_URL}/users`, {
+      const usersResponse = await apiFetch(`/users`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -117,7 +107,7 @@ const AdminUrlaubsUebersicht: React.FC = () => {
         const activeUsers = users.filter((user: any) => user.is_active !== false)
         const budgetPromises = activeUsers.map(async (user: any) => {
           try {
-            const budgetResponse = await fetch(`${API_BASE_URL}/urlaub/budget/${user.id}?jahr=${selectedYear}`, {
+            const budgetResponse = await apiFetch(`/urlaub/budget/${user.id}?jahr=${selectedYear}`, {
               headers: {
                 'Authorization': `Bearer ${token}`
               }

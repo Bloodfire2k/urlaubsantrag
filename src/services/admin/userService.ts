@@ -1,16 +1,5 @@
 import { User, UserFormData } from '../../types/admin/user'
-
-// Dynamische API-URL für lokales Netzwerk
-const getApiBaseUrl = () => {
-  const hostname = window.location.hostname
-  if (hostname === 'localhost' || hostname === '127.0.0.1') {
-      return 'http://localhost:3001/api'
-} else {
-  return `https://${hostname}:3001/api`
-  }
-}
-
-const API_BASE_URL = getApiBaseUrl()
+import { apiFetch } from '../../lib/api'
 
 export const userService = {
   // Benutzer laden
@@ -20,7 +9,7 @@ export const userService = {
       throw new Error('Kein Token gefunden')
     }
 
-    const response = await fetch(`${API_BASE_URL}/users?include_inactive=true`, {
+    const response = await apiFetch(`/users?include_inactive=true`, {
       headers: {
         'Authorization': `Bearer ${token}`
       }
@@ -41,7 +30,7 @@ export const userService = {
       throw new Error('Kein gültiges Token gefunden')
     }
 
-    const response = await fetch(`${API_BASE_URL}/auth/register`, {
+    const response = await apiFetch(`/auth/register`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -74,7 +63,7 @@ export const userService = {
       throw new Error('Kein gültiges Token gefunden')
     }
 
-    const response = await fetch(`${API_BASE_URL}/users/${userId}`, {
+    const response = await apiFetch(`/users/${userId}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -99,7 +88,7 @@ export const userService = {
     // Neues zufälliges Passwort generieren
     const newPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8)
 
-    const response = await fetch(`${API_BASE_URL}/users/${userId}/password`, {
+    const response = await apiFetch(`/users/${userId}/password`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -123,7 +112,7 @@ export const userService = {
       throw new Error('Kein gültiges Token gefunden')
     }
 
-    const response = await fetch(`${API_BASE_URL}/users/${userId}/password`, {
+    const response = await apiFetch(`/users/${userId}/password`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -146,12 +135,12 @@ export const userService = {
     }
 
     const url = isActive 
-      ? `${API_BASE_URL}/users/${userId}`
-      : `${API_BASE_URL}/users/${userId}/reactivate`
+      ? `/users/${userId}`
+      : `/users/${userId}/reactivate`
     
     const method = isActive ? 'DELETE' : 'POST'
 
-    const response = await fetch(url, {
+    const response = await apiFetch(url, {
       method: method,
       headers: {
         'Authorization': `Bearer ${token}`
@@ -171,7 +160,7 @@ export const userService = {
       throw new Error('Kein gültiges Token gefunden')
     }
 
-    const response = await fetch(`${API_BASE_URL}/users/${userId}/permanent-delete`, {
+    const response = await apiFetch(`/users/${userId}/permanent-delete`, {
       method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${token}`

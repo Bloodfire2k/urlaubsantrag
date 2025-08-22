@@ -19,17 +19,7 @@ import AdminUrlaubsUebersichtInline from './components/admin/overview/AdminUrlau
 import Pruefung from './components/vacation/Pruefung'
 import { Urlaub, UrlaubBudget, convertUrlaubFromBackend, convertUrlaubBudgetFromBackend } from './types/urlaub'
 
-// API-Basis-URL
-// Dynamische API-URL für lokales Netzwerk
-const getApiBaseUrl = () => {
-  const hostname = window.location.hostname
-  if (hostname === 'localhost' || hostname === '127.0.0.1') {
-      return 'http://localhost:3001/api' // Änderung: Port auf 3001 geändert. Grund: Backend läuft jetzt auf Port 3001
-} else {
-  return `https://${hostname}:3001/api`
-  }
-}
-const API_BASE_URL = getApiBaseUrl()
+import { API_BASE, apiFetch } from './lib/api'
 
 function AppContent() {
   const { user, logout, getToken } = useAuth()
@@ -129,7 +119,7 @@ function AppContent() {
     try {
       setIsLoading(true)
       const token = localStorage.getItem('urlaub_token')
-      const response = await fetch(`${API_BASE_URL}/urlaub?t=${Date.now()}`, {
+      const response = await apiFetch(`/urlaub?t=${Date.now()}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -157,7 +147,7 @@ function AppContent() {
     try {
       setIsLoading(true)
       const token = localStorage.getItem('urlaub_token')
-      const response = await fetch(`${API_BASE_URL}/urlaub/budget/all?jahr=${selectedYear}`, {
+      const response = await apiFetch(`/urlaub/budget/all?jahr=${selectedYear}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -195,7 +185,7 @@ function AppContent() {
 
     try {
       const token = localStorage.getItem('urlaub_token')
-      const response = await fetch(`${API_BASE_URL}/urlaub`, {
+      const response = await apiFetch(`/urlaub`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -223,7 +213,7 @@ function AppContent() {
   const deleteUrlaub = async (id: string) => {
     try {
       const token = localStorage.getItem('urlaub_token')
-      const response = await fetch(`${API_BASE_URL}/urlaub/${id}`, {
+      const response = await apiFetch(`/urlaub/${id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -491,7 +481,7 @@ function AppContent() {
                             for (const urlaub of rejectedUrlaube) {
                               try {
                                 console.log('🗑️ Versuche Urlaub zu löschen:', urlaub.id, 'Status:', urlaub.status)
-                                const response = await fetch(`${API_BASE_URL}/urlaub/${urlaub.id}`, {
+                                const response = await apiFetch(`/urlaub/${urlaub.id}`, {
                                   method: 'DELETE',
                                   headers: {
                                     'Authorization': `Bearer ${getToken()}`

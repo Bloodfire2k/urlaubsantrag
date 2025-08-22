@@ -1,17 +1,6 @@
 import { UrlaubBudget, Urlaub, MitarbeiterStats, GlobalStats, UrlaubStatus } from '../../types/admin/overview'
 import { calculateWorkingDays } from '../../utils/vacationCalculator'
-
-// Dynamische API-URL für lokales Netzwerk
-const getApiBaseUrl = () => {
-  const hostname = window.location.hostname
-  if (hostname === 'localhost' || hostname === '127.0.0.1') {
-      return 'http://localhost:3001/api'
-} else {
-  return `https://${hostname}:3001/api`
-  }
-}
-
-const API_BASE_URL = getApiBaseUrl()
+import { apiFetch } from '../../lib/api'
 
 export const overviewService = {
   // Budgets laden
@@ -27,7 +16,7 @@ export const overviewService = {
         authToken = storedToken
       }
 
-      const response = await fetch(`${API_BASE_URL}/urlaub/budget/all?jahr=${selectedYear}`, {
+      const response = await apiFetch(`/urlaub/budget/all?jahr=${selectedYear}`, {
         headers: {
           'Authorization': `Bearer ${authToken}`,
           'Content-Type': 'application/json'

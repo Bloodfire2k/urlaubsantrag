@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Urlaub, UrlaubBudget, MitarbeiterStats, GlobalStats, StatusCounts } from '../../types/admin/overview'
 import { overviewService } from '../../services/admin/overviewService'
+import { apiFetch } from '../../lib/api'
 
 export const useOverviewData = (allUrlaube: Urlaub[], selectedYear: number, selectedMitarbeiter: number | null, setSelectedMitarbeiter: (id: number | null) => void, token?: string, onDataChange?: () => void) => {
   const [budgets, setBudgets] = useState<UrlaubBudget[]>([])
@@ -111,7 +112,7 @@ export const useOverviewData = (allUrlaube: Urlaub[], selectedYear: number, sele
     try {
       console.log('Sende Status-Update:', { urlaubId, newStatus })
       
-              const response = await fetch(`https://localhost:3001/api/urlaub/${urlaubId}/status`, {
+              const response = await apiFetch(`/urlaub/${urlaubId}/status`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

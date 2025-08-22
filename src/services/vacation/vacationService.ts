@@ -1,21 +1,10 @@
 import { Market, User, Urlaub } from '../../types/vacation'
-
-// Dynamische API-URL für lokales Netzwerk
-const getApiBaseUrl = () => {
-  const hostname = window.location.hostname
-  if (hostname === 'localhost' || hostname === '127.0.0.1') {
-      return 'http://localhost:3001/api'
-} else {
-  return `https://${hostname}:3001/api`
-  }
-}
-
-const API_BASE_URL = getApiBaseUrl()
+import { apiFetch } from '../../lib/api'
 
 export const vacationService = {
   // Märkte laden
   async fetchMarkets(token: string): Promise<Market[]> {
-    const response = await fetch(`${API_BASE_URL}/markets`, {
+    const response = await apiFetch(`/markets`, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
@@ -34,7 +23,7 @@ export const vacationService = {
 
   // Benutzer laden
   async fetchUsers(token: string): Promise<User[]> {
-    const response = await fetch(`${API_BASE_URL}/users`, {
+    const response = await apiFetch(`/users`, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
@@ -53,7 +42,7 @@ export const vacationService = {
 
   // Urlaubsdaten laden
   async fetchUrlaube(token: string, year: number): Promise<Urlaub[]> {
-    const response = await fetch(`${API_BASE_URL}/urlaub?jahr=${year}`, {
+    const response = await apiFetch(`/urlaub?jahr=${year}`, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'

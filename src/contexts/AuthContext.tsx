@@ -1,17 +1,7 @@
 import React, { createContext, useContext, useReducer, useEffect, useRef } from 'react'
 import { User, LoginCredentials, AuthState, RegisterData } from '../types/auth'
 
-// API-Basis-URL
-// Dynamische API-URL für lokales Netzwerk
-const getApiBaseUrl = () => {
-  const hostname = window.location.hostname
-  if (hostname === 'localhost' || hostname === '127.0.0.1') {
-      return 'http://localhost:3001/api' // Änderung: Port auf 3001 geändert. Grund: Backend läuft jetzt auf Port 3001
-} else {
-  return `https://${hostname}:3001/api`
-  }
-}
-const API_BASE_URL = getApiBaseUrl()
+import { apiFetch } from '../lib/api'
 
 interface AuthContextType extends AuthState {
   login: (credentials: LoginCredentials) => Promise<boolean>
@@ -96,7 +86,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     dispatch({ type: 'LOGIN_START' })
 
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+      const response = await apiFetch(`/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -144,7 +134,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     dispatch({ type: 'REGISTER_START' })
 
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/register`, {
+      const response = await apiFetch(`/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

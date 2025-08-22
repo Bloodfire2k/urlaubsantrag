@@ -7,6 +7,7 @@ import { VacationFilters } from './VacationFilters'
 import { VacationCalendar } from './VacationCalendar'
 import { NoEmployeesFound } from './NoEmployeesFound'
 import { EmployeeDetails } from '../admin/overview/EmployeeDetails'
+import { apiFetch } from '../../lib/api'
 
 const Pruefung: React.FC = () => {
   const { selectedYear } = useYear()
@@ -68,7 +69,7 @@ const Pruefung: React.FC = () => {
     setBusyId(urlaubId);
 
     try {
-      const response = await fetch(`/api/urlaub/${urlaubId}/status`, {
+      const response = await apiFetch(`/urlaub/${urlaubId}/status`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -107,7 +108,7 @@ const Pruefung: React.FC = () => {
     setBusyId(urlaubId);
 
     try {
-      const response = await fetch(`/api/urlaub/${urlaubId}`, {
+      const response = await apiFetch(`/urlaub/${urlaubId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`

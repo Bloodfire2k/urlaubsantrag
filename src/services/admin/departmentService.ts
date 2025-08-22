@@ -1,14 +1,4 @@
-// Dynamische API-URL für lokales Netzwerk
-const getApiBaseUrl = () => {
-  const hostname = window.location.hostname
-  if (hostname === 'localhost' || hostname === '127.0.0.1') {
-      return 'http://localhost:3001/api'
-} else {
-  return `https://${hostname}:3001/api`
-  }
-}
-
-const API_BASE_URL = getApiBaseUrl()
+import { apiFetch } from '../../lib/api'
 
 export const departmentService = {
   // Alle Abteilungen laden
@@ -23,7 +13,7 @@ export const departmentService = {
         throw new Error('Nicht eingeloggt')
       }
 
-      const response = await fetch(`${API_BASE_URL}/users/departments`, {
+      const response = await apiFetch(`/users/departments`, {
         headers: {
           'Authorization': `Bearer ${authToken}`
         }

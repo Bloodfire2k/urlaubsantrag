@@ -3,6 +3,7 @@ import { User, Market, UserFormData, Toast } from '../../types/admin/user'
 import { userService } from '../../services/admin/userService'
 import { useAuth } from '../../contexts/AuthContext'
 import { useYear } from '../../contexts/YearContext'
+import { apiFetch } from '../../lib/api'
 
 export const useUserManagement = () => {
   const { getToken } = useAuth()
@@ -127,7 +128,7 @@ export const useUserManagement = () => {
     // Dann asynchron das Budget laden und das Formular aktualisieren
     try {
       console.log('Lade Budget für User:', user.id, 'Jahr:', selectedYear)
-      const response = await fetch(`/api/urlaub/budget/all?jahr=${selectedYear}&t=${Date.now()}`, {
+      const response = await apiFetch(`/urlaub/budget/all?jahr=${selectedYear}&t=${Date.now()}`, {
         headers: {
           'Authorization': `Bearer ${getToken()}`,
           'Cache-Control': 'no-cache'
@@ -227,8 +228,8 @@ export const useUserManagement = () => {
       // Urlaubsbudget aktualisieren wenn sich der Anspruch geändert hat
       try {
         console.log('Aktualisiere Budget für User:', editingUser.id, 'auf', userForm.urlaubsanspruch, 'Tage')
-        const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3001' : `https://${window.location.hostname}:3001`
-        const response = await fetch(`${apiUrl}/api/urlaub/budget/${editingUser.id}/${selectedYear}`, {
+
+        const response = await apiFetch(`/urlaub/budget/${editingUser.id}/${selectedYear}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -247,7 +248,7 @@ export const useUserManagement = () => {
           console.log('Budget erfolgreich aktualisiert:', result)
           
           // Frisch nachladen zur Bestätigung
-          const freshResponse = await fetch(`${apiUrl}/api/urlaub/budget/${editingUser.id}/${selectedYear}`, {
+          const freshResponse = await apiFetch(`/urlaub/budget/${editingUser.id}/${selectedYear}`, {
             headers: {
               'Authorization': `Bearer ${getToken()}`,
               'Cache-Control': 'no-cache'
