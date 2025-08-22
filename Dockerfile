@@ -30,6 +30,11 @@ RUN npx prisma generate
 # Gesamten Source Code kopieren
 COPY . .
 
+# VITE_API_URL für Build konfigurieren
+ARG VITE_API_URL
+ENV VITE_API_URL=${VITE_API_URL}
+RUN echo ">>> VITE_API_URL during build: ${VITE_API_URL}"
+
 # TypeScript und Vite Build
 RUN npm run build
 
