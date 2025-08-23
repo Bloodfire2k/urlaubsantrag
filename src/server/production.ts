@@ -66,11 +66,12 @@ async function initDatabase() {
     console.log('✅ JSON-Datenbank wird initialisiert...')
     console.log('✅ JSON-Datenbank bereit')
     
-    // Debug: einmal prüfen, ob Prod+Postgres erkannt werden
-    console.log('[boot]', {
-      NODE_ENV: process.env.NODE_ENV,
-      DB_TYPE: process.env.DB_TYPE,
-      hasDBUrl: !!process.env.DATABASE_URL,
+    const dbType = process.env.DB_TYPE ?? 'sqlite';
+    const hasDBUrl = !!process.env.DATABASE_URL;
+    console.log('[boot]', { 
+      NODE_ENV: process.env.NODE_ENV, 
+      DB_TYPE: dbType, 
+      hasDBUrl 
     });
     
     if (process.env.NODE_ENV === 'production' && process.env.JSON_DB_RESET_ON_DEPLOY === '1') {
@@ -78,7 +79,9 @@ async function initDatabase() {
       await seedAdminIfNeeded()
     }
     
-    await migrateAndSeedPostgres() // WICHTIG: await
+    if (dbType === 'postgres' && hasDBUrl) {
+      await migrateAndSeedPostgres();
+    }
   } catch (error) {
     console.error('❌ Datenbankverbindungsfehler:', error)
     process.exit(1)
