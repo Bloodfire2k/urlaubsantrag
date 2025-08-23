@@ -2,6 +2,8 @@ import { Router, Request, Response } from 'express'
 import jwt from 'jsonwebtoken'
 import { db } from '../database'
 import { getUsersRepo } from '../data/usersRepo'
+import { prisma } from '../../lib/prisma'
+import { hashPassword } from '../utils/password'
 
 const router = Router()
 
@@ -92,19 +94,40 @@ router.post('/register', async (req: Request, res: Response) => {
       return res.status(403).json({ error: 'Nur Admins können neue Benutzer erstellen' })
     }
 
-    const { 
-      username, 
-      email, 
-      fullName, 
-      password, 
-      role, 
-      marketId, 
+    const {
+      username,
+      email,
+      password,
+      role,
+      fullName,
       department,
-      urlaubsanspruch 
-    } = req.body
+      // neu/flexibel:
+      marketId: rawMarketId,
+      marketName: rawMarketName,
+      market: rawMarketFallback // falls Frontend "market" sendet
+    } = req.body as any
+
+    // Market auflösen: bevorzugt ID, sonst Name
+    let marketId: number | null = null
+    const tryId = rawMarketId ?? rawMarketFallback
+    if (tryId !== undefined && tryId !== null && String(tryId).trim() !== '') {
+      const n = Number(tryId)
+      if (!Number.isNaN(n)) marketId = n
+    }
+
+    let market = null as null | { id: number }
+    if (marketId != null) {
+      market = await prisma.market.findUnique({ where: { id: marketId } })
+    } else if (rawMarketName && String(rawMarketName).trim() !== '') {
+      market = await prisma.market.findFirst({ where: { name: String(rawMarketName).trim() } })
+    }
+
+    if (!market) {
+      return res.status(400).json({ error: 'Markt nicht gefunden' })
+    }
 
     // Validierung
-    if (!username || !email || !fullName || !password || !role || !marketId) {
+    if (!username || !email || !fullName || !password || !role || !department) {
       return res.status(400).json({ 
         error: 'Alle Pflichtfelder müssen ausgefüllt werden' 
       })
@@ -117,79 +140,29 @@ router.post('/register', async (req: Request, res: Response) => {
     }
 
     // Prüfe ob Benutzername oder E-Mail bereits existiert
-    const existingUser = db.getUserByUsername(username)
+    const usersRepo = getUsersRepo()
+    const existingUser = await usersRepo.findByUsernameOrEmail(username)
     if (existingUser) {
       return res.status(400).json({ 
         error: 'Benutzername bereits vergeben' 
       })
     }
 
-    // Prüfe ob Markt existiert
-    const market = db.getMarketById(marketId)
-    if (!market) {
-      return res.status(400).json({ 
-        error: 'Markt nicht gefunden' 
-      })
-    }
-
     // Passwort hashen
-    const passwordHash = await password.hash(password, 12)
+    const passwordHash = await hashPassword(password, 12)
 
     // Neuen Benutzer erstellen
-    const newUser = db.addUser({
+    const created = await usersRepo.create({
       username,
       email,
-      fullName: fullName,
-      password_hash: passwordHash,
-      role: role as 'admin' | 'manager' | 'employee',
-      market_id: marketId,
+      fullName,
       department,
-      is_active: true
+      role: role as 'admin' | 'manager' | 'employee',
+      passwordHash,
+      marketId: market.id,
     })
 
-    // Urlaubsbudget für das aktuelle Jahr erstellen
-    const currentYear = new Date().getFullYear()
-    const jahresanspruch = urlaubsanspruch || (role === 'admin' ? 30 : 25)
-    const defaultBudget = {
-      mitarbeiterId: newUser.id,
-      jahr: currentYear,
-      jahresanspruch: jahresanspruch,
-      genommen: 0,
-      verplant: 0,
-      uebertrag: 0,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    }
-
-    // Urlaubsbudget in der Datenbank speichern
-    db.addUrlaubBudget(defaultBudget)
-
-    // Audit-Log erstellen
-    const auditLog = {
-      id: 0,
-      user_id: decoded.userId,
-      action: 'CREATE_USER',
-      table_name: 'users',
-      record_id: newUser.id,
-      new_values: JSON.stringify(newUser),
-      ip_address: req.ip,
-      user_agent: req.get('User-Agent'),
-      created_at: new Date().toISOString()
-    }
-
-    res.status(201).json({
-      success: true,
-      message: 'Benutzer erfolgreich erstellt',
-      user: {
-        id: newUser.id,
-        username: newUser.username,
-        email: newUser.email,
-        fullName: newUser.full_name,
-        role: newUser.role,
-        marketId: newUser.market_id,
-        department: newUser.department
-      }
-    })
+    res.json({ ok: true, user: { id: created.id } })
 
   } catch (error) {
     console.error('Registrierungs-Fehler:', error)

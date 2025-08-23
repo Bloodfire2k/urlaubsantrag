@@ -65,6 +65,8 @@ export async function migrateAndSeedPostgres() {
     throw new Error('Kein Markt verfügbar für Admin-Seed')
   }
 
+  console.log('[seed] fixed markets ready - Edeka & E-Center verfügbar')
+
   // Admin-User sicherstellen
   const adminUsername = process.env.ADMIN_USERNAME || 'admin'
   const admin = await prisma.user.findFirst({ where: { username: adminUsername } })
