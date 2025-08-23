@@ -24,9 +24,9 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      DATABASE_URL: postgresql://urlaubsuser:${DB_PASSWORD}@postgres:5432/urlaubsantrag
+      DB_TYPE: ${DB_TYPE:-postgres}
       JWT_SECRET: ${JWT_SECRET}
-      PORT: 3000
+      PORT: ${PORT:-3000}
     ports:
       - "${APP_PORT:-3000}:3000"
     depends_on:
