@@ -1,5 +1,6 @@
 // src/server/data/usersRepo.ts
 import { prisma } from '../../lib/prisma'
+import { verifyPassword } from '../utils/password'
 type UserEntity = import('@prisma/client').User
 
 export type UsersRepo = {
@@ -22,8 +23,7 @@ function pgRepo(): UsersRepo {
     count: () => prisma.user.count(),
     create: (data) => prisma.user.create({ data }),
     verify: async (plain, hash) => {
-      const bcrypt = await import('bcryptjs')
-      return bcrypt.compare(plain, hash)
+      return verifyPassword(plain, hash)
     }
   }
 }
