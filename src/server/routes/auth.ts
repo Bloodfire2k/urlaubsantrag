@@ -286,4 +286,22 @@ router.post('/change-password', async (req: Request, res: Response) => {
   }
 })
 
+import { prisma } from '../../lib/prisma';
+import express from 'express';
+
+const diag = express.Router();
+diag.get('/_diag-db', async (_req, res) => {
+  const isPg =
+    process.env.NODE_ENV === 'production' &&
+    (process.env.DB_TYPE || '').toLowerCase() === 'postgres';
+  let count: number | null = null;
+  if (isPg) {
+    try { count = await prisma.user.count(); } catch { count = -1; }
+  }
+  res.json({ mode: isPg ? 'postgres' : 'json', count });
+});
+
+// Router export beibehalten; die Diag-Route unter /api/auth/_diag-db verfügbar machen:
+router.use(diag);
+
 export { router as authRoutes }
