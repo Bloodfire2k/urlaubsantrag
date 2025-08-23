@@ -1,6 +1,6 @@
 import { execSync } from 'node:child_process';
 import { prisma } from '../lib/prisma';
-import { password } from '../utils/password';
+import { password } from './utils/password';
 
 export async function migrateAndSeedPostgres() {
   if (process.env.NODE_ENV !== 'production') return;
