@@ -104,8 +104,9 @@ export async function migrateAndSeedPostgres() {
       const password = process.env.ADMIN_PASSWORD ?? 'admin123';
       const passwordHash = await hashPassword(password);
       const fullName = process.env.ADMIN_FULLNAME ?? 'Administrator';
+      const department = process.env.ADMIN_DEPARTMENT ?? 'Zentrale';
       await prisma.user.create({
-        data: { username, email, passwordHash, role: 'admin' as any, fullName }
+        data: { username, email, passwordHash, role: 'admin' as any, fullName, department }
       });
       console.log(`🌱 Seeded admin user: ${username}`);
     }
@@ -119,8 +120,9 @@ export async function migrateAndSeedPostgres() {
       const password = process.env.ADMIN_PASSWORD ?? 'admin123';
       const passwordHash = await hashPassword(password);
       const fullName = process.env.ADMIN_FULLNAME ?? 'Administrator';
+      const department = process.env.ADMIN_DEPARTMENT ?? 'Zentrale';
       await prisma.user.create({
-        data: { username, email, passwordHash, role: 'admin' as any, fullName }
+        data: { username, email, passwordHash, role: 'admin' as any, fullName, department }
       });
       console.log(`🌱 Seeded admin user: ${username}`);
     }
