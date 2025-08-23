@@ -1,130 +1,69 @@
-import { execSync } from 'node:child_process';
-import { PrismaClient } from '@prisma/client';
-import pg from 'pg';
+// src/server/bootstrap-postgres.ts
+import { execSync } from 'node:child_process'
+import { prisma } from '../lib/prisma'
+import * as bcrypt from 'bcryptjs'
 
-const prisma = new PrismaClient();
-const { Client } = pg;
-
-async function waitForDb(url: string, timeoutMs = 60000) {
-  const start = Date.now();
-  let attempt = 0;
-  while (Date.now() - start < timeoutMs) {
-    attempt++;
+async function waitForDb(maxTries = 20, delayMs = 1500) {
+  for (let i = 1; i <= maxTries; i++) {
     try {
-      const c = new Client({ connectionString: url });
-      await c.connect();
-      await c.end();
-      return;
+      await prisma.$queryRaw`SELECT 1`
+      return
     } catch {
-      const wait = Math.min(2000 + attempt * 200, 5000);
-      console.log(`[db] not ready, retry #${attempt} in ${wait}ms…`);
-      await new Promise(r => setTimeout(r, wait));
+      console.log(`[db] not ready, retry ${i}/${maxTries}…`)
+      await new Promise(r => setTimeout(r, delayMs))
     }
   }
-  throw new Error('DB not reachable after retries');
+  throw new Error('DB not reachable after retries')
 }
 
-async function tableExists(url: string, fqName: string) {
-  const c = new Client({ connectionString: url });
-  await c.connect();
-  const res = await c.query('select to_regclass($1) as found', [fqName]);
-  await c.end();
-  return Boolean(res.rows?.[0]?.found);
-}
-
-function run(cmd: string) { 
-  console.log(`[prisma] ${cmd}`); 
-  execSync(cmd, { stdio: 'inherit' }); 
-}
-
-function hasMigrationsDir(): boolean {
-  const fs = require('fs'); 
-  const base = 'prisma/migrations';
-  try { 
-    if (!fs.existsSync(base)) return false; 
-    return fs.readdirSync(base).filter((d:string)=>!d.startsWith('.')).length>0; 
-  } catch { 
-    return false; 
-  }
-}
-
-async function ensureUsersTable(url: string) {
-  if (!(await tableExists(url, 'public.users'))) {
-    console.warn('[prisma] users table missing → running `prisma db push` fallback');
-    run('npx prisma db push');
-  }
-}
-
-async function hashPassword(plain: string): Promise<string> {
-  try {
-    const bcrypt = await import('bcrypt');
-    return await bcrypt.hash(plain, 10);
-  } catch {
-    console.log('[auth] using bcryptjs (fallback)');
-    const mod = await import('bcryptjs');
-    const bjs: any = (mod as any).default || mod;
-    return await bjs.hash(plain, 10);
-  }
+function run(cmd: string) {
+  console.log('[prisma]', cmd)
+  execSync(cmd, { stdio: 'inherit' })
 }
 
 export async function migrateAndSeedPostgres() {
-  const url = process.env.DATABASE_URL;
-  if (!url) throw new Error('DATABASE_URL is not set');
-  
-  // Nur in Production mit Postgres ausführen
-  if (process.env.NODE_ENV !== 'production' || process.env.DB_TYPE !== 'postgres') {
-    console.log('[bootstrap] Skipping Postgres bootstrap - not in production with postgres');
-    return;
-  }
+  await waitForDb()
 
-  await waitForDb(url);
-
-  // Erst migrations, sichtbar im Log
-  if (hasMigrationsDir()) { 
-    try { 
-      run('npx prisma migrate deploy'); 
-    } catch { 
-      console.warn('[prisma] migrate deploy failed → fallback db push'); 
-      run('npx prisma db push'); 
-    } 
-  } else { 
-    console.warn('[prisma] no migrations found → running db push'); 
-    run('npx prisma db push'); 
-  }
-
-  // Verifizieren / ggf. fallback
-  await ensureUsersTable(url);
-
-  // Seed nur wenn Tabelle leer
+  // Migrations → Fallback db push
   try {
-    const count = await prisma.user.count();
-    if (count === 0) {
-      const username = process.env.ADMIN_USERNAME ?? 'admin';
-      const email    = process.env.ADMIN_EMAIL ?? 'admin@example.com';
-      const password = process.env.ADMIN_PASSWORD ?? 'admin123';
-      const passwordHash = await hashPassword(password);
-      const fullName = process.env.ADMIN_FULLNAME ?? 'Administrator';
-      const department = process.env.ADMIN_DEPARTMENT ?? 'Zentrale';
-      await prisma.user.create({
-        data: { username, email, passwordHash, role: 'admin' as any, fullName, department }
-      });
-      console.log(`🌱 Seeded admin user: ${username}`);
-    }
-  } catch (e) {
-    console.warn('[seed] could not count/seed users, trying fallback ensure again', e);
-    await ensureUsersTable(url);
-    const cnt2 = await prisma.user.count();
-    if (cnt2 === 0) {
-      const username = process.env.ADMIN_USERNAME ?? 'admin';
-      const email    = process.env.ADMIN_EMAIL ?? 'admin@example.com';
-      const password = process.env.ADMIN_PASSWORD ?? 'admin123';
-      const passwordHash = await hashPassword(password);
-      const fullName = process.env.ADMIN_FULLNAME ?? 'Administrator';
-      const department = process.env.ADMIN_DEPARTMENT ?? 'Zentrale';
-      await prisma.user.create({
-        data: { username, email, passwordHash, role: 'admin' as any, fullName, department }
-      });
-      console.log(`🌱 Seeded admin user: ${username}`);
-    }
+    run('npx prisma migrate deploy')
+  } catch {
+    console.log('[prisma] no migrations found → running db push')
+    run('npx prisma db push')
+  }
+
+  // Default-Market sicherstellen
+  let market = await prisma.market.findFirst()
+  if (!market) {
+    market = await prisma.market.create({
+      data: {
+        name: process.env.DEFAULT_MARKET_NAME || 'E-Center',
+        address: '-',
+        phone: '-',
+        email: 'info@ecenter.de',
+      },
+    })
+  }
+
+  // Admin-User sicherstellen
+  const adminUsername = process.env.ADMIN_USERNAME || 'admin'
+  const admin = await prisma.user.findFirst({ where: { username: adminUsername } })
+  if (!admin) {
+    const adminPwd = process.env.ADMIN_PASSWORD || 'admin123'
+    const passwordHash = await bcrypt.hash(adminPwd, 10)
+    await prisma.user.create({
+      data: {
+        username: adminUsername,
+        email: process.env.ADMIN_EMAIL || 'admin@ecenter-jochum.de',
+        fullName: 'Administrator',
+        department: 'Zentrale',
+        role: 'admin',
+        passwordHash,
+        market: { connect: { id: market.id } }, // required relation!
+      },
+    })
+    console.log(`[seed] admin user angelegt: ${adminUsername} / ${adminPwd}`)
+  } else {
+    console.log('[seed] admin existiert bereits, überspringe')
   }
 }

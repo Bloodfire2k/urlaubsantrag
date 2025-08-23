@@ -1,8 +1,7 @@
 import { Router, Request, Response } from 'express'
-import { password } from '../utils/password'
 import jwt from 'jsonwebtoken'
 import { db } from '../database'
-import { usersRepo } from '../data/usersRepo'
+import { getUsersRepo } from '../data/usersRepo'
 
 const router = Router()
 
@@ -15,6 +14,7 @@ router.post('/login', async (req: Request, res: Response) => {
     const { username, email, usernameOrEmail, password } = req.body || {};
     const idf = (username || email || usernameOrEmail || '').trim();
     if (!idf || !password) return res.status(400).json({ error:'missing_credentials' });
+    const usersRepo = getUsersRepo();
     const user = await usersRepo.findByUsernameOrEmail(idf);
     if (!user) { console.warn('[auth] user_not_found', idf); return res.status(401).json({ error:'unauthorized' }); }
     const ok = await usersRepo.verify(password, user.passwordHash);

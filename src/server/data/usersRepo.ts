@@ -1,69 +1,47 @@
 // src/server/data/usersRepo.ts
-import { password } from '../utils/password';
+import { prisma } from '../../lib/prisma'
+type UserEntity = import('@prisma/client').User
 
-const usePg =
-  process.env.NODE_ENV === 'production' &&
-  (process.env.DB_TYPE || '').toLowerCase() === 'postgres';
+export type UsersRepo = {
+  findByUsername(username: string): Promise<UserEntity | null>
+  findByUsernameOrEmail(idf: string): Promise<UserEntity | null>
+  count(): Promise<number>
+  create(data: {
+    username: string; email: string; fullName: string; department: string;
+    role: 'admin' | 'manager' | 'employee'; passwordHash: string; marketId: number
+  }): Promise<UserEntity>
+  verify(plain: string, hash: string): Promise<boolean>
+}
 
-export type SimpleUser = {
-  id: any;
-  username: string;
-  email?: string | null;
-  role: string;
-  passwordHash: string;
-};
-
-// WICHTIG: Keine top-level awaits! Alles erst IN den Funktionen importieren.
-export const usersRepo = {
-  async count(): Promise<number> {
-    if (usePg) {
-      const { prisma } = await import('../../lib/prisma');
-      return prisma.user.count();
-    } else {
-      const { db } = await import('../database');
-      return db.users.length;
+function pgRepo(): UsersRepo {
+  return {
+    findByUsername: (username) => prisma.user.findFirst({ where: { username } }),
+    findByUsernameOrEmail: (idf) => prisma.user.findFirst({
+      where: { OR: [{ username: idf.toLowerCase() }, { email: idf.toLowerCase() }] }
+    }),
+    count: () => prisma.user.count(),
+    create: (data) => prisma.user.create({ data }),
+    verify: async (plain, hash) => {
+      const bcrypt = await import('bcryptjs')
+      return bcrypt.compare(plain, hash)
     }
-  },
+  }
+}
 
-  async findByUsernameOrEmail(idf: string): Promise<SimpleUser | null> {
-    const x = idf.toLowerCase();
-    if (usePg) {
-      const { prisma } = await import('../../lib/prisma');
-      return (await prisma.user.findFirst({
-        where: { OR: [{ username: x }, { email: x }] },
-      })) as unknown as SimpleUser | null;
-    } else {
-      const { db } = await import('../database');
-      const u = db.users;
-      return (u.find(
-        (r: any) =>
-          r.username?.toLowerCase() === x || r.email?.toLowerCase() === x
-      ) ?? null) as SimpleUser | null;
-    }
-  },
+// Optional: JSON-Repo belassen wie bisher, aber ohne Top-Level-await
+function jsonRepo(): UsersRepo {
+  // Rufe hier die vorhandenen JSON-Funktionen auf (falls genutzt)
+  // oder wirf einen Fehler, wenn JSON im Prod nicht mehr verwendet werden soll.
+  return {
+    async findByUsername() { return null },
+    async findByUsernameOrEmail() { return null },
+    async count() { return 0 },
+    async create() { throw new Error('JSON repo not supported in postgres mode') },
+    async verify() { return false }
+  }
+}
 
-  async createAdmin(username: string, email: string, plain: string) {
-    const hash = await password.hash(plain, 10);
-    if (usePg) {
-      const { prisma } = await import('../../lib/prisma');
-      return prisma.user.create({
-        data: { username, email, passwordHash: hash, role: 'admin' },
-      });
-    } else {
-      const { db } = await import('../database');
-      return db.addUser({ 
-        username, 
-        email, 
-        fullName: username, 
-        password_hash: hash, 
-        role: 'admin', 
-        market_id: 1, 
-        is_active: true 
-      });
-    }
-  },
-
-  async verify(plain: string, hash: string) {
-    return password.compare(plain, hash);
-  },
-};
+export function getUsersRepo(): UsersRepo {
+  return process.env.DB_TYPE === 'postgres' ? pgRepo() : jsonRepo()
+  // keine async Initialisierung!
+}

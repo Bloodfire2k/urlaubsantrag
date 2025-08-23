@@ -80,7 +80,9 @@ async function initDatabase() {
     }
     
     if (dbType === 'postgres' && hasDBUrl) {
-      await migrateAndSeedPostgres();
+      console.log('🔄 PostgreSQL-Datenbank wird initialisiert...')
+      await migrateAndSeedPostgres()
+      console.log('✅ PostgreSQL-Datenbank bereit')
     }
   } catch (error) {
     console.error('❌ Datenbankverbindungsfehler:', error)
