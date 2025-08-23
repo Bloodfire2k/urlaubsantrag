@@ -32,17 +32,37 @@ export async function migrateAndSeedPostgres() {
     run('npx prisma db push')
   }
 
-  // Default-Market sicherstellen
-  let market = await prisma.market.findFirst()
-  if (!market) {
-    market = await prisma.market.create({
+  // Feste Märkte anlegen (Edeka, E-Center)
+  let edekaMarket = await prisma.market.findFirst({ where: { name: 'Edeka' } })
+  if (!edekaMarket) {
+    edekaMarket = await prisma.market.create({
       data: {
-        name: process.env.DEFAULT_MARKET_NAME || 'E-Center',
-        address: '-',
-        phone: '-',
-        email: 'info@ecenter.de',
+        name: 'Edeka',
+        address: 'Musterstraße 1, 12345 Musterstadt',
+        phone: '+49 123 456789',
+        email: 'info@edeka-musterstadt.de',
       },
     })
+    console.log('[seed] Edeka-Markt angelegt')
+  }
+
+  let ecenterMarket = await prisma.market.findFirst({ where: { name: 'E-Center' } })
+  if (!ecenterMarket) {
+    ecenterMarket = await prisma.market.create({
+      data: {
+        name: 'E-Center',
+        address: 'Beispielstraße 42, 54321 Beispielstadt',
+        phone: '+49 987 654321',
+        email: 'info@ecenter-beispielstadt.de',
+      },
+    })
+    console.log('[seed] E-Center-Markt angelegt')
+  }
+
+  // Standard-Markt für Admin (E-Center oder erster verfügbarer)
+  const defaultMarket = ecenterMarket || edekaMarket || await prisma.market.findFirst()
+  if (!defaultMarket) {
+    throw new Error('Kein Markt verfügbar für Admin-Seed')
   }
 
   // Admin-User sicherstellen
@@ -59,7 +79,7 @@ export async function migrateAndSeedPostgres() {
         department: 'Zentrale',
         role: 'admin',
         passwordHash,
-        market: { connect: { id: market.id } }, // required relation!
+        market: { connect: { id: defaultMarket.id } }, // required relation!
       },
     })
     console.log(`[seed] admin user angelegt: ${adminUsername} / ${adminPwd}`)
