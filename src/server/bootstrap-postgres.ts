@@ -32,9 +32,20 @@ async function tableExists(url: string, fqName: string) {
   return Boolean(res.rows?.[0]?.found);
 }
 
-function run(cmd: string) {
-  console.log(`[prisma] ${cmd}`);
-  execSync(cmd, { stdio: 'inherit' });
+function run(cmd: string) { 
+  console.log(`[prisma] ${cmd}`); 
+  execSync(cmd, { stdio: 'inherit' }); 
+}
+
+function hasMigrationsDir(): boolean {
+  const fs = require('fs'); 
+  const base = 'prisma/migrations';
+  try { 
+    if (!fs.existsSync(base)) return false; 
+    return fs.readdirSync(base).filter((d:string)=>!d.startsWith('.')).length>0; 
+  } catch { 
+    return false; 
+  }
 }
 
 async function ensureUsersTable(url: string) {
@@ -47,12 +58,12 @@ async function ensureUsersTable(url: string) {
 async function hashPassword(plain: string): Promise<string> {
   try {
     const bcrypt = await import('bcrypt');
-    const salt = await bcrypt.genSalt(10);
-    return bcrypt.hash(plain, 10);
+    return await bcrypt.hash(plain, 10);
   } catch {
     console.log('[auth] using bcryptjs (fallback)');
-    const bcryptjs = await import('bcryptjs');
-    return bcryptjs.hash(plain, 10);
+    const mod = await import('bcryptjs');
+    const bjs: any = (mod as any).default || mod;
+    return await bjs.hash(plain, 10);
   }
 }
 
@@ -69,11 +80,16 @@ export async function migrateAndSeedPostgres() {
   await waitForDb(url);
 
   // Erst migrations, sichtbar im Log
-  try {
-    run('npx prisma migrate deploy');
-  } catch (e) {
-    console.warn('[prisma] migrate deploy failed → trying `prisma db push` fallback', e);
-    run('npx prisma db push');
+  if (hasMigrationsDir()) { 
+    try { 
+      run('npx prisma migrate deploy'); 
+    } catch { 
+      console.warn('[prisma] migrate deploy failed → fallback db push'); 
+      run('npx prisma db push'); 
+    } 
+  } else { 
+    console.warn('[prisma] no migrations found → running db push'); 
+    run('npx prisma db push'); 
   }
 
   // Verifizieren / ggf. fallback
