@@ -2,9 +2,26 @@ import { execSync } from 'node:child_process';
 import { prisma } from '../lib/prisma';
 import { password } from './utils/password';
 
+async function waitForDb(max = 20, delayMs = 1500) {
+  for (let i = 1; i <= max; i++) {
+    try { 
+      await prisma.$queryRaw`SELECT 1`; 
+      return; 
+    }
+    catch (e) {
+      console.log(`[db] not ready, retry ${i}/${max}…`);
+      await new Promise(r => setTimeout(r, delayMs));
+    }
+  }
+  throw new Error('DB not reachable after retries');
+}
+
 export async function migrateAndSeedPostgres() {
   if (process.env.NODE_ENV !== 'production') return;
   if ((process.env.DB_TYPE||'').toLowerCase()!=='postgres') return;
+  
+  await waitForDb();
+  
   execSync('npx prisma migrate deploy', { stdio:'inherit' });
   console.log('✅ prisma migrate deploy done');
   const c = await prisma.user.count().catch(()=>0);

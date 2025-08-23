@@ -16,7 +16,16 @@ services:
       ALLOWED_ORIGIN: ${ALLOWED_ORIGIN}
     volumes:
       - sqlite_data:/app/data
+    networks:
+      - kk4c08g4oso4cgokwkskskww
+      - coolify
 
 volumes:
   sqlite_data:
     driver: local
+
+networks:
+  kk4c08g4oso4cgokwkskskww:
+    external: true
+  coolify:
+    external: true

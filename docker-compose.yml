@@ -27,7 +27,16 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+    networks:
+      - kk4c08g4oso4cgokwkskskww
+      - coolify
 
 volumes:
   sqlite_data:
     driver: local
+
+networks:
+  kk4c08g4oso4cgokwkskskww:
+    external: true
+  coolify:
+    external: true
