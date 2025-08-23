@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express'
 import { password } from '../utils/password'
 import jwt from 'jsonwebtoken'
 import { db } from '../database'
+import { usersRepo } from '../data/usersRepo'
 
 const router = Router()
 
@@ -11,31 +12,13 @@ const JWT_SECRET = process.env.JWT_SECRET || 'ihr-super-geheimer-jwt-schluessel-
 // Login
 router.post('/login', async (req: Request, res: Response) => {
   try {
-    const { username, password } = req.body
-
-    if (!username || !password) {
-      return res.status(400).json({ 
-        error: 'Benutzername und Passwort sind erforderlich' 
-      })
-    }
-
-    // Benutzer in der Datenbank suchen
-    const user = db.getUserByUsername(username)
-    
-    if (!user || !user.is_active) {
-      return res.status(401).json({ 
-        error: 'Ungültige Anmeldedaten oder Benutzer deaktiviert' 
-      })
-    }
-
-    // Passwort überprüfen
-    const isValidPassword = await password.compare(password, user.password_hash)
-    
-    if (!isValidPassword) {
-      return res.status(401).json({ 
-        error: 'Ungültige Anmeldedaten' 
-      })
-    }
+    const { username, email, usernameOrEmail, password } = req.body || {};
+    const idf = (username || email || usernameOrEmail || '').trim();
+    if (!idf || !password) return res.status(400).json({ error:'missing_credentials' });
+    const user = await usersRepo.findByUsernameOrEmail(idf);
+    if (!user) { console.warn('[auth] user_not_found', idf); return res.status(401).json({ error:'unauthorized' }); }
+    const ok = await usersRepo.verify(password, user.passwordHash);
+    if (!ok) { console.warn('[auth] wrong_password userId=', user.id); return res.status(401).json({ error:'unauthorized' }); }
 
     // JWT Token erstellen
     const token = jwt.sign(
@@ -43,7 +26,7 @@ router.post('/login', async (req: Request, res: Response) => {
         userId: user.id, 
         username: user.username, 
         role: user.role,
-        marketId: user.market_id 
+        marketId: user.market_id || 1
       },
       JWT_SECRET,
       { expiresIn: '24h' }
@@ -66,10 +49,10 @@ router.post('/login', async (req: Request, res: Response) => {
       id: user.id,
       username: user.username,
       email: user.email,
-      fullName: user.fullName,
+      fullName: user.fullName || user.username,
       role: user.role,
-      marketId: user.market_id,
-      department: user.department
+      marketId: user.market_id || 1,
+      department: user.department || 'Unbekannt'
     }
 
     res.json({

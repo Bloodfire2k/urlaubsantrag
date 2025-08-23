@@ -13,6 +13,7 @@ import path from 'path'
 
 // Bootstrap imports
 import { resetJsonDbIfNeeded, seedAdminIfNeeded } from './bootstrap-json'
+import { migrateAndSeedPostgres } from './bootstrap-postgres'
 
 // Routen importieren
 import { authRoutes } from './routes/auth'
@@ -69,6 +70,8 @@ async function initDatabase() {
       await resetJsonDbIfNeeded()
       await seedAdminIfNeeded()
     }
+    
+    await migrateAndSeedPostgres()
   } catch (error) {
     console.error('❌ Datenbankverbindungsfehler:', error)
     process.exit(1)

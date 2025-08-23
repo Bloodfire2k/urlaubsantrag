@@ -5,17 +5,12 @@
  * und wiederverwendet wird (wichtig für Development Hot-Reload)
  */
 
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient } from '@prisma/client';
 
-declare global {
-  // Verhindere mehrere Instanzen bei Hot-Reload in Development
-  var __prisma: PrismaClient | undefined
-}
+const g = globalThis as unknown as { prisma?: PrismaClient };
 
-export const prisma = globalThis.__prisma || new PrismaClient({
-  log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
-})
+export const prisma = g.prisma ?? new PrismaClient({
+  log: process.env.NODE_ENV === 'production' ? [] : ['error','warn'],
+});
 
-if (process.env.NODE_ENV !== 'production') {
-  globalThis.__prisma = prisma
-}
+if (process.env.NODE_ENV !== 'production') g.prisma = prisma;
