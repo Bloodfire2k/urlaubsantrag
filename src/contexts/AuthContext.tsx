@@ -103,8 +103,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     dispatch({ type: 'LOGIN_START' })
 
     try {
-      const response = await fetchWithToken(`/auth/login`, {
+      // Für Login verwenden wir normale fetch, da noch kein Token verfügbar ist
+      const response = await fetch(`/auth/login`, {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify(credentials),
       })
 
@@ -148,8 +152,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     dispatch({ type: 'REGISTER_START' })
 
     try {
-      const response = await fetchWithToken(`/auth/register`, {
+      // Für Register verwenden wir normale fetch, da noch kein Token verfügbar ist
+      const response = await fetch(`/auth/register`, {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify(data),
       })
 
