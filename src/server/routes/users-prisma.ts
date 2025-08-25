@@ -12,6 +12,35 @@ import { authenticateToken } from '../middleware/auth/jwtAuth'
 
 const router = Router()
 
+// Typdefinition für User-Daten aus der Datenbank
+type UserDb = {
+  id: number
+  username: string | null
+  email: string | null
+  fullName: string
+  role: string
+  department: string | null
+  marketId: number | null
+  isActive: boolean
+  createdAt: Date
+  market?: { id: number; name: string } | null
+}
+
+// Hilfsfunktion für Mapping von camelCase zu snake_case
+function mapUserToSnake(u: UserDb) {
+  return {
+    id: u.id,
+    username: u.username,
+    email: u.email,
+    fullName: u.fullName,
+    role: u.role,
+    department: u.department ?? null,
+    market_id: u.marketId,
+    is_active: u.isActive,
+    created_at: u.createdAt,
+    market: u.market ? { id: u.market.id, name: u.market.name } : null,
+  }
+}
 
 
 /**
@@ -120,7 +149,6 @@ router.get('/', authenticateToken, async (req: Request, res: Response) => {
           department: true,
           marketId: true,
           isActive: true,
-          annualLeaveDays: true,
           createdAt: true,
           market: { 
             select: { 
@@ -135,30 +163,8 @@ router.get('/', authenticateToken, async (req: Request, res: Response) => {
       })
     ])
 
-    // Daten für Frontend-Kompatibilität transformieren (beide Formate)
-    const items = users.map((u: any) => ({
-      // Basis-Felder
-      id: u.id,
-      username: u.username,
-      email: u.email,
-      fullName: u.fullName,
-      role: u.role,
-      department: u.department,
-      
-      // camelCase (Prisma-Format, für Rückwärtskompatibilität)
-      marketId: u.marketId,
-      isActive: u.isActive,
-      annualLeaveDays: u.annualLeaveDays ?? 25,
-      createdAt: u.createdAt,
-      
-      // snake_case (UI-Format, wird von Frontend erwartet)
-      market_id: u.marketId,
-      is_active: u.isActive,
-      created_at: u.createdAt,
-      
-      // Market-Informationen
-      market: u.market
-    }))
+    // Response über mapUserToSnake bauen
+    const items = users.map(mapUserToSnake)
 
     console.log(`[users:list] sending ${items.length} of total=${total}`)
 
@@ -204,7 +210,6 @@ router.get('/:id', authenticateToken, async (req: Request, res: Response) => {
         department: true,
         marketId: true,
         isActive: true,
-        annualLeaveDays: true,
         createdAt: true,
         market: {
           select: {
@@ -224,33 +229,8 @@ router.get('/:id', authenticateToken, async (req: Request, res: Response) => {
       return res.status(403).json({ error: 'Keine Berechtigung für diesen Benutzer' })
     }
 
-    // Response mit beiden Formaten (camelCase + snake_case)
-    const responseUser = {
-      // Basis-Felder
-      id: user.id,
-      username: user.username,
-      email: user.email,
-      fullName: user.fullName,
-      role: user.role,
-      department: user.department,
-      
-      // camelCase (Prisma-Format)
-      marketId: user.marketId,
-      isActive: user.isActive,
-      annualLeaveDays: user.annualLeaveDays ?? 25,
-      createdAt: user.createdAt,
-      
-      // snake_case (UI-Format)
-      market_id: user.marketId,
-      is_active: user.isActive,
-      created_at: user.createdAt,
-      
-      // Market-Informationen
-      market: user.market
-    }
-
     res.json({
-      user: responseUser
+      user: mapUserToSnake(user)
     })
 
   } catch (error) {
@@ -332,9 +312,9 @@ router.put('/:id', authenticateToken, async (req: Request, res: Response) => {
         email: true,
         fullName: true,
         role: true,
+        department: true,
         marketId: true,
         isActive: true,
-        annualLeaveDays: true,
         createdAt: true,
         market: {
           select: {
@@ -347,7 +327,7 @@ router.put('/:id', authenticateToken, async (req: Request, res: Response) => {
 
     res.json({
       message: 'Benutzer erfolgreich aktualisiert',
-      user: updatedUser
+      user: mapUserToSnake(updatedUser)
     })
 
   } catch (error) {
