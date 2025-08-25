@@ -54,15 +54,15 @@ router.get('/counts', authenticateToken, async (req: Request, res: Response) => 
  * GET /api/users - Gefilterte Benutzerabfrage
  * 
  * Query-Parameter:
- * - search: Sucht in username, fullName, email
- * - marketId: Filtert nach Markt-ID
- * - role: Filtert nach Rolle
- * - department: Filtert nach Abteilung
- * - activeOnly: Nur aktive Benutzer (true/false)
+ * - role: Filtert nach Rolle (optional)
+ * - marketId: Filtert nach Markt-ID (optional)
+ * - q: Sucht in username, fullName, email (optional)
+ * - limit: Maximale Anzahl Ergebnisse (default 100)
+ * - offset: Offset für Paginierung (default 0)
  */
 router.get('/', authenticateToken, async (req: Request, res: Response) => {
   try {
-    const { search, marketId, role, department, activeOnly } = req.query
+    const { role, marketId, q, limit = '100', offset = '0' } = req.query
     
     // Basis-Filter basierend auf Benutzerrolle
     let whereClause: any = {}
@@ -77,11 +77,11 @@ router.get('/', authenticateToken, async (req: Request, res: Response) => {
     // Admins sehen alle Benutzer (keine zusätzlichen Filter)
 
     // Zusätzliche Query-Filter anwenden
-    if (search) {
+    if (q) {
       whereClause.OR = [
-        { username: { contains: search as string, mode: "insensitive" } },
-        { fullName: { contains: search as string, mode: "insensitive" } },
-        { email: { contains: search as string, mode: "insensitive" } },
+        { username: { contains: q as string, mode: "insensitive" } },
+        { fullName: { contains: q as string, mode: "insensitive" } },
+        { email: { contains: q as string, mode: "insensitive" } },
       ]
     }
     
@@ -92,58 +92,49 @@ router.get('/', authenticateToken, async (req: Request, res: Response) => {
     if (role) {
       whereClause.role = role as string
     }
-    
-    if (department) {
-      whereClause.department = department as string
-    }
-    
-    if (activeOnly === 'true') {
-      whereClause.isActive = true
-    }
 
-    // Sicherstellen, dass immer gültige Werte zurückgegeben werden
-    try {
+    const limitNum = Math.min(parseInt(limit as string) || 100, 1000)
+    const offsetNum = parseInt(offset as string) || 0
 
-    console.log('[users:list] Filter:', whereClause)
+    console.log('[users:list] Filter:', whereClause, 'limit:', limitNum, 'offset:', offsetNum)
 
-    const users = await prisma.user.findMany({
-      where: whereClause,
-      select: {
-        id: true,
-        username: true,
-        email: true,
-        fullName: true,
-        role: true,
-        marketId: true,
-        createdAt: true,
-        market: {
-          select: {
-            id: true,
-            name: true
-          }
-        }
-      },
-      orderBy: [
-        { fullName: 'asc' }
-      ]
+    // Identisches where-Objekt für count und findMany
+    const [total, users] = await Promise.all([
+      prisma.user.count({ where: whereClause }),
+      prisma.user.findMany({
+        where: whereClause,
+        select: {
+          id: true,
+          username: true,
+          email: true,
+          fullName: true,
+          role: true,
+          department: true,
+          marketId: true,
+          createdAt: true,
+          market: { 
+            select: { 
+              id: true, 
+              name: true 
+            } 
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: limitNum,
+        skip: offsetNum
+      })
+    ])
+
+    console.log(`[users:list] sending ${users.length} of total=${total}`)
+
+    res.json({
+      items: users,
+      total: total
     })
 
-    console.log(`[users:list] count=${users.length}`)
-
-      res.json({
-        items: users,
-        total: users.length
-      })
-    } catch (error) {
-      console.error('❌ Fehler beim Abrufen der Benutzer:', error)
-      // Bei Fehlern leere Liste zurückgeben statt 500
-      res.status(200).json({ 
-        items: [],
-        total: 0
-      })
-    }
   } catch (error) {
-    console.error('❌ Kritischer Fehler beim Abrufen der Benutzer:', error)
+    console.error('❌ Fehler beim Abrufen der Benutzer:', error)
+    // Bei Fehlern leere Liste zurückgeben statt 500
     res.status(200).json({ 
       items: [],
       total: 0

@@ -171,45 +171,45 @@ router.get('/', authenticateToken, async (req: Request, res: Response) => {
       userFilter.isActive = true
     }
 
-         // Datums-Filter für Jahr oder spezifischen Bereich
-     let dateFilter: any = {}
-     if (year) {
-       const yearNum = parseInt(year as string)
-       const { startOfYear, endOfYear } = getYearDateRange(yearNum)
-       
-       // Urlaubsanträge die das Jahr überschneiden:
-       // (endDate >= 1.1.Jahr) AND (startDate <= 31.12.Jahr)
-       dateFilter = {
-         AND: [
-           { endDate: { gte: startOfYear } },
-           { startDate: { lte: endOfYear } }
-         ]
-       }
-     } else if (from || to) {
-       // Spezifischer Datumsbereich
-       if (from) {
-         dateFilter.startDate = { gte: new Date(from as string) }
-       }
-       if (to) {
-         dateFilter.endDate = { lte: new Date(to as string) }
-       }
-     }
+    // Datums-Filter für Jahr oder spezifischen Bereich
+    let dateFilter: any = {}
+    if (year) {
+      const yearNum = parseInt(year as string)
+      const { startOfYear, endOfYear } = getYearDateRange(yearNum)
+      
+      // Urlaubsanträge die das Jahr überschneiden:
+      // (endDate >= 1.1.Jahr) AND (startDate <= 31.12.Jahr)
+      dateFilter = {
+        AND: [
+          { endDate: { gte: startOfYear } },
+          { startDate: { lte: endOfYear } }
+        ]
+      }
+    } else if (from || to) {
+      // Spezifischer Datumsbereich
+      if (from) {
+        dateFilter.startDate = { gte: new Date(from as string) }
+      }
+      if (to) {
+        dateFilter.endDate = { lte: new Date(to as string) }
+      }
+    }
 
-     // Status-Filter
-     let statusFilter: any = {}
-     if (status) {
-       statusFilter.status = status as string
-     }
+    // Status-Filter
+    let statusFilter: any = {}
+    if (status) {
+      statusFilter.status = status as string
+    }
 
-     console.log('[vacations:list] Filter:', { userFilter, dateFilter, statusFilter })
+    console.log('[vacations:list] Filter:', { userFilter, dateFilter, statusFilter })
 
-     const urlaubAntraege = await prisma.vacation.findMany({
-       where: {
-         userId: userFilter.id ? { equals: userFilter.id } : undefined,
-         marketId: userFilter.marketId ? { equals: userFilter.marketId } : undefined,
-         ...dateFilter,
-         ...statusFilter
-       },
+    const urlaubAntraege = await prisma.vacation.findMany({
+      where: {
+        userId: userFilter.id ? { equals: userFilter.id } : undefined,
+        marketId: userFilter.marketId ? { equals: userFilter.marketId } : undefined,
+        ...dateFilter,
+        ...statusFilter
+      },
       include: {
         user: {
           select: {
@@ -232,8 +232,8 @@ router.get('/', authenticateToken, async (req: Request, res: Response) => {
       ]
     })
 
-         // Daten für Frontend-Kompatibilität transformieren
-     const transformedAntraege = urlaubAntraege.map((antrag: any) => ({
+    // Daten für Frontend-Kompatibilität transformieren
+    const transformedAntraege = urlaubAntraege.map((antrag: any) => ({
       id: antrag.id,
       mitarbeiterId: antrag.userId,
       startDatum: antrag.startDate.toISOString().split('T')[0], // YYYY-MM-DD Format
@@ -273,6 +273,10 @@ router.get('/', authenticateToken, async (req: Request, res: Response) => {
  */
 router.get('/:id', authenticateToken, async (req: Request, res: Response) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Nicht authentifiziert' })
+    }
+
     const antragId = parseInt(req.params.id)
     
     const antrag = await prisma.vacation.findUnique({
@@ -345,6 +349,10 @@ router.get('/:id', authenticateToken, async (req: Request, res: Response) => {
  */
 router.post('/', authenticateToken, async (req: Request, res: Response) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Nicht authentifiziert' })
+    }
+
     const { start_datum, end_datum, bemerkung } = req.body
 
     // Validierung
@@ -435,31 +443,44 @@ router.get('/budget', authenticateToken, async (req: Request, res: Response) => 
     const start = new Date(Date.UTC(jahr, 0, 1, 0, 0, 0));
     const end   = new Date(Date.UTC(jahr, 11, 31, 23, 59, 59));
 
-    // wichtig: KEIN select: { days: true }
+    // Nur existierende Felder selektieren - KEIN days
     const vacations = await prisma.vacation.findMany({
-      where: { userId: mitarbeiterId, status: 'genehmigt', startDate: { gte: start, lte: end } },
+      where: { 
+        userId: mitarbeiterId, 
+        status: 'genehmigt', 
+        startDate: { gte: start, lte: end } 
+      },
       select: { id: true, startDate: true, endDate: true },
     });
 
-    const usedDays = vacations.reduce((sum, v) => sum + daysInclusive(v.startDate, v.endDate), 0);
-    const entitlement = DEFAULT_BUDGET_DAYS;
+    const usedDays = vacations.reduce((sum: number, v: { startDate: Date; endDate: Date }) => sum + daysInclusive(v.startDate, v.endDate), 0);
+    const budgetDays = DEFAULT_BUDGET_DAYS;
+    const remainingDays = Math.max(budgetDays - usedDays, 0);
 
     return res.json({
       jahr,
       employee: { id: user.id, name: user.fullName, department: user.department, marketId: user.marketId },
-      entitlement,
+      budgetDays,
       usedDays,
-      remainingDays: Math.max(entitlement - usedDays, 0),
-      vacations: vacations.map(v => ({
-        id: v.id, startDate: v.startDate, endDate: v.endDate,
+      remainingDays,
+      vacations: vacations.map((v: { id: number; startDate: Date; endDate: Date }) => ({
+        id: v.id, 
+        startDate: v.startDate, 
+        endDate: v.endDate,
         days: daysInclusive(v.startDate, v.endDate),
       })),
     });
   } catch (err) {
     console.error('[vacations:budget:single]', err);
     const jahr = Number(req.query.jahr ?? new Date().getFullYear());
-    // niemals HTML/404; bei Fehlern Defaults zurückgeben
-    return res.status(200).json({ jahr, entitlement: 25, usedDays: 0, remainingDays: 25, vacations: [] });
+    // Niemals HTML/404; bei Fehlern Defaults zurückgeben
+    return res.status(200).json({ 
+      jahr, 
+      budgetDays: DEFAULT_BUDGET_DAYS, 
+      usedDays: 0, 
+      remainingDays: DEFAULT_BUDGET_DAYS, 
+      vacations: [] 
+    });
   }
 });
 
@@ -478,7 +499,7 @@ router.get('/budget/all', authenticateToken, async (req: Request, res: Response)
     const end   = new Date(Date.UTC(jahr, 11, 31, 23, 59, 59));
 
     let userFilter: any = {}
-    if (req.user.role === 'manager') {
+    if (req.user && req.user.role === 'manager') {
       userFilter.marketId = req.user.marketId
     }
 
@@ -501,17 +522,17 @@ router.get('/budget/all', authenticateToken, async (req: Request, res: Response)
       usedByUser.set(v.userId, (usedByUser.get(v.userId) ?? 0) + daysInclusive(v.startDate, v.endDate));
     }
 
-    const items = users.map(u => {
+    const items = users.map((u: { id: number; fullName: string | null; department: string | null; marketId: number }) => {
       const used = usedByUser.get(u.id) ?? 0;
-      const budget = DEFAULT_BUDGET_DAYS;
+      const budgetDays = DEFAULT_BUDGET_DAYS;
       return {
         userId: u.id,
         fullName: u.fullName ?? '',
         department: u.department ?? '',
         marketId: u.marketId,
-        budgetDays: budget,
+        budgetDays: budgetDays,
         usedDays: used,
-        remainingDays: Math.max(budget - used, 0),
+        remainingDays: Math.max(budgetDays - used, 0),
       };
     });
 
