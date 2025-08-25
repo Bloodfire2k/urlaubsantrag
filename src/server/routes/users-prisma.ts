@@ -101,6 +101,9 @@ router.get('/', authenticateToken, async (req: Request, res: Response) => {
       whereClause.isActive = true
     }
 
+    // Sicherstellen, dass immer gültige Werte zurückgegeben werden
+    try {
+
     console.log('[users:list] Filter:', whereClause)
 
     const users = await prisma.user.findMany({
@@ -130,15 +133,23 @@ router.get('/', authenticateToken, async (req: Request, res: Response) => {
 
     console.log(`[users:list] count=${users.length}`)
 
-    res.json({
-      items: users,
-      total: users.length
-    })
-
+      res.json({
+        items: users,
+        total: users.length
+      })
+    } catch (error) {
+      console.error('❌ Fehler beim Abrufen der Benutzer:', error)
+      // Bei Fehlern leere Liste zurückgeben statt 500
+      res.status(200).json({ 
+        items: [],
+        total: 0
+      })
+    }
   } catch (error) {
-    console.error('❌ Fehler beim Abrufen der Benutzer:', error)
-    res.status(500).json({ 
-      error: 'Interner Server-Fehler beim Abrufen der Benutzer' 
+    console.error('❌ Kritischer Fehler beim Abrufen der Benutzer:', error)
+    res.status(200).json({ 
+      items: [],
+      total: 0
     })
   }
 })

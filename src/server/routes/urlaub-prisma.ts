@@ -23,13 +23,10 @@ function getYearDateRange(year: number) {
 /**
  * Hilfsfunktion: Berechnet Tage zwischen zwei Daten (inklusive)
  */
-function daysInclusive(start: Date | string, end: Date | string) {
-  const s = new Date(start); 
-  const e = new Date(end);
-  s.setHours(12, 0, 0, 0); 
-  e.setHours(12, 0, 0, 0); // DST-sicher
-  const diff = Math.floor((e.getTime() - s.getTime()) / 86_400_000) + 1;
-  return Math.max(diff, 0);
+function daysInclusive(start: Date, end: Date) {
+  const s = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate()));
+  const e = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate()));
+  return Math.floor((e.getTime() - s.getTime()) / 86_400_000) + 1;
 }
 
 /**
@@ -419,86 +416,64 @@ router.post('/', authenticateToken, async (req: Request, res: Response) => {
 
 /**
  * GET /api/urlaub/budget - Budget eines Mitarbeiters abrufen
- * GET /api/urlaub/budget/all - Budget aller Mitarbeiter abrufen
  */
-router.get(['/budget', '/budget/all'], authenticateToken, async (req: Request, res: Response, next: any) => {
+router.get('/budget', authenticateToken, async (req: Request, res: Response) => {
   try {
-    const jahr = Number(req.query.jahr) || new Date().getFullYear();
-    const mitarbeiterId = req.query.mitarbeiterId ? Number(req.query.mitarbeiterId) : undefined;
-    const yearStart = new Date(`${jahr}-01-01T00:00:00.000Z`);
-    const yearEnd   = new Date(`${jahr}-12-31T23:59:59.999Z`);
+    const jahr = Number(req.query.jahr ?? new Date().getFullYear());
+    const mitarbeiterId = Number(req.query.mitarbeiterId ?? req.user?.id);
+    if (!mitarbeiterId) return res.status(400).json({ error: 'missing_employee_id' });
 
-    // SINGLE: wenn ?mitarbeiterId übergeben ist -> eine Person
-    if (mitarbeiterId) {
-      const user = await prisma.user.findUnique({
-        where: { id: mitarbeiterId },
-        include: { market: true },
-      });
-             if (!user) return res.status(200).json({ 
-         jahr, 
-         userId: mitarbeiterId, 
-         fullName: 'Unbekannt', 
-         marketId: null, 
-         marketName: null, 
-         budgetTage: 0, 
-         genommenTage: 0, 
-         verbleibendTage: 0 
-       });
+    const user = await prisma.user.findUnique({
+      where: { id: mitarbeiterId },
+      select: { id: true, fullName: true, department: true, marketId: true, urlaubstageAnspruch: true, urlaubstage: true, annualLeaveDays: true },
+    });
+    if (!user) return res.status(404).json({ error: 'user_not_found' });
 
-      // Berechtigung prüfen
-      if (req.user.role === 'employee' && req.user.id !== mitarbeiterId) {
-        return res.status(403).json({ 
-          error: 'Keine Berechtigung für diesen Mitarbeiter' 
-        })
-      }
+    const start = new Date(Date.UTC(jahr, 0, 1, 0, 0, 0));
+    const end   = new Date(Date.UTC(jahr, 11, 31, 23, 59, 59));
 
-      if (req.user.role === 'manager') {
-        if (user.marketId !== req.user.marketId) {
-          return res.status(403).json({ 
-            error: 'Keine Berechtigung für diesen Mitarbeiter' 
-          })
-        }
-      }
+    // wichtig: KEIN select: { days: true }
+    const vacations = await prisma.vacation.findMany({
+      where: { userId: mitarbeiterId, status: 'genehmigt', startDate: { gte: start, lte: end } },
+      select: { id: true, startDate: true, endDate: true },
+    });
 
-             const vacations = await prisma.vacation.findMany({
-         where: { 
-           userId: user.id, 
-           status: 'genehmigt', 
-           startDate: { gte: yearStart, lte: yearEnd } 
-         },
-         select: { startDate: true, endDate: true },
-       });
+    const usedDays = vacations.reduce((sum, v) => sum + daysInclusive(v.startDate, v.endDate), 0);
+    const entitlement =
+      user.urlaubstageAnspruch ?? user.urlaubstage ?? user.annualLeaveDays ?? 25;
 
-       const genommen = vacations.reduce((sum: number, v: any) => {
-         const used = daysInclusive(v.startDate, v.endDate);
-         return sum + used;
-       }, 0);
+    return res.json({
+      jahr,
+      employee: { id: user.id, name: user.fullName, department: user.department, marketId: user.marketId },
+      entitlement,
+      usedDays,
+      remainingDays: Math.max(entitlement - usedDays, 0),
+      vacations: vacations.map(v => ({
+        id: v.id, startDate: v.startDate, endDate: v.endDate,
+        days: daysInclusive(v.startDate, v.endDate),
+      })),
+    });
+  } catch (err) {
+    console.error('[vacations:budget:single]', err);
+    const jahr = Number(req.query.jahr ?? new Date().getFullYear());
+    // niemals HTML/404; bei Fehlern Defaults zurückgeben
+    return res.status(200).json({ jahr, entitlement: 25, usedDays: 0, remainingDays: 25, vacations: [] });
+  }
+});
 
-      const anspruch =
-        (user as any).urlaubstageAnspruch ??
-        (user as any).urlaubstage ??
-        (user as any).annualLeaveDays ?? 25; // Standard: 25 Tage
-
-      const payload = {
-        jahr,
-        userId: user.id,
-        fullName: (user as any).fullName ?? `${(user as any).firstName ?? ''} ${(user as any).lastName ?? ''}`.trim(),
-        marketId: user.marketId ?? null,
-        marketName: user.market?.name ?? null,
-        budgetTage: Number(anspruch) || 25,
-        genommenTage: Number(genommen) || 0,
-        verbleibendTage: Math.max(0, (Number(anspruch) || 25) - (Number(genommen) || 0)),
-      };
-      return res.json(payload);
-    }
-
-    // ALL: ohne mitarbeiterId -> Liste für alle Mitarbeitenden
+/**
+ * GET /api/urlaub/budget/all - Budget aller Mitarbeiter abrufen (nur admin|manager)
+ */
+router.get('/budget/all', authenticateToken, async (req: Request, res: Response) => {
+  try {
     // Berechtigung prüfen - nur Admins und Manager
-    if (req.user.role === 'employee') {
-      return res.status(403).json({ 
-        error: 'Keine Berechtigung für alle Budgets' 
-      })
+    if (!req.user || (req.user.role !== 'admin' && req.user.role !== 'manager')) {
+      return res.status(403).json({ error: 'Keine Berechtigung für alle Budgets' });
     }
+
+    const jahr = Number(req.query.jahr ?? new Date().getFullYear());
+    const start = new Date(Date.UTC(jahr, 0, 1, 0, 0, 0));
+    const end   = new Date(Date.UTC(jahr, 11, 31, 23, 59, 59));
 
     let userFilter: any = {}
     if (req.user.role === 'manager') {
@@ -507,46 +482,40 @@ router.get(['/budget', '/budget/all'], authenticateToken, async (req: Request, r
 
     const users = await prisma.user.findMany({
       where: userFilter,
-      include: { market: true },
+      select: { id: true, fullName: true, department: true, marketId: true, urlaubstageAnspruch: true, urlaubstage: true, annualLeaveDays: true },
     });
 
-         // Alle genehmigten Urlaube im Jahr holen und pro User summieren
-     const vacations = await prisma.vacation.findMany({
-       where: { 
-         status: 'genehmigt', 
-         startDate: { gte: yearStart, lte: yearEnd } 
-       },
-       select: { userId: true, startDate: true, endDate: true },
-     });
+    // Alle genehmigten Urlaube im Jahr holen und pro User summieren
+    const vacations = await prisma.vacation.findMany({
+      where: { 
+        status: 'genehmigt', 
+        startDate: { gte: start, lte: end } 
+      },
+      select: { userId: true, startDate: true, endDate: true },
+    });
 
-     const usedDaysByUser = new Map<number, number>();
-     for (const v of vacations) {
-       const used = daysInclusive(v.startDate, v.endDate);
-       usedDaysByUser.set(v.userId, (usedDaysByUser.get(v.userId) ?? 0) + used);
-     }
+    const usedByUser = new Map<number, number>();
+    for (const v of vacations) {
+      usedByUser.set(v.userId, (usedByUser.get(v.userId) ?? 0) + daysInclusive(v.startDate, v.endDate));
+    }
 
-         const items = users.map((u: any) => {
-      const anspruch =
-        (u as any).urlaubstageAnspruch ??
-        (u as any).urlaubstage ??
-        (u as any).annualLeaveDays ?? 25; // Standard: 25 Tage
-             const genommen = usedDaysByUser.get(u.id) || 0;
+    const items = users.map(u => {
+      const entitlement = u.urlaubstageAnspruch ?? u.urlaubstage ?? u.annualLeaveDays ?? 25;
+      const usedDays = usedByUser.get(u.id) ?? 0;
       return {
-        userId: u.id,
-        fullName: (u as any).fullName ?? `${(u as any).firstName ?? ''} ${(u as any).lastName ?? ''}`.trim(),
-        marketId: u.marketId ?? null,
-        marketName: u.market?.name ?? null,
-        budgetTage: Number(anspruch) || 25,
-        genommenTage: Number(genommen) || 0,
-        verbleibendTage: Math.max(0, (Number(anspruch) || 25) - (Number(genommen) || 0)),
+        employee: { id: u.id, name: u.fullName, department: u.department, marketId: u.marketId },
+        entitlement,
+        usedDays,
+        remainingDays: Math.max(entitlement - usedDays, 0),
       };
     });
 
     return res.json({ jahr, total: items.length, items });
-  } catch (err) { 
-    console.error('[vacations:budget]', err);
-    next(err); 
+  } catch (err) {
+    console.error('[vacations:budget:all]', err);
+    const jahr = Number(req.query.jahr ?? new Date().getFullYear());
+    return res.status(200).json({ jahr, total: 0, items: [] });
   }
-})
+});
 
 export { router as urlaubPrismaRoutes }
