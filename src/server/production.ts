@@ -76,12 +76,8 @@ async function initDatabase() {
       console.log('🔄 PostgreSQL-Datenbank wird initialisiert...')
       await migrateAndSeedPostgres()
       console.log('✅ PostgreSQL-Datenbank bereit')
-    } else if (dbType === 'sqlite') {
-      console.log('🔄 SQLite-Datenbank wird initialisiert...')
-      // Für Tests verwenden wir SQLite
-      console.log('✅ SQLite-Datenbank bereit')
     } else {
-      console.error('❌ Datenbank-URL fehlt oder DB_TYPE ist nicht konfiguriert')
+      console.error('❌ PostgreSQL-Datenbank-URL fehlt oder DB_TYPE ist nicht postgres')
       process.exit(1)
     }
   } catch (error) {
