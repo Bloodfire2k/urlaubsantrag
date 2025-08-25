@@ -6,37 +6,13 @@
  */
 
 import { Router, Request, Response } from 'express'
-import jwt from 'jsonwebtoken'
+import * as bcrypt from 'bcryptjs'
 import { prisma } from '../../lib/prisma'
+import { authenticateToken } from '../middleware/auth/jwtAuth'
 
 const router = Router()
-const JWT_SECRET = process.env.JWT_SECRET || (() => { throw new Error('JWT_SECRET environment variable is required') })()
 
-// Middleware für JWT-Authentifizierung
-const authenticateToken = (req: Request, res: Response, next: any) => {
-  const authHeader = req.headers.authorization
-  const token = authHeader && authHeader.split(' ')[1]
 
-  if (!token) {
-    return res.status(401).json({ error: 'Kein Token bereitgestellt' })
-  }
-
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET) as any
-    req.user = decoded
-    next()
-  } catch (error) {
-    return res.status(403).json({ error: 'Ungültiger Token' })
-  }
-}
-
-// Middleware für Admin-Berechtigung
-const requireAdmin = (req: Request, res: Response, next: any) => {
-  if (req.user.role !== 'admin') {
-    return res.status(403).json({ error: 'Admin-Berechtigung erforderlich' })
-  }
-  next()
-}
 
 /**
  * GET /api/users/counts - Aggregat für Dashboard-Kacheln
@@ -63,8 +39,7 @@ router.get('/counts', authenticateToken, async (req: Request, res: Response) => 
     console.log(`[users:counts] total=${total}, admins=${admins}, managers=${managers}, mitarbeiter=${mitarbeiter}`)
 
     res.json({
-      success: true,
-      counts: { total, admins, managers, mitarbeiter }
+      total, admins, managers, mitarbeiter
     })
 
   } catch (error) {
@@ -94,7 +69,7 @@ router.get('/', authenticateToken, async (req: Request, res: Response) => {
     
     if (req.user.role === 'employee') {
       // Mitarbeiter sehen nur sich selbst
-      whereClause.id = req.user.userId
+      whereClause.id = req.user.id
     } else if (req.user.role === 'manager') {
       // Manager sehen nur Benutzer ihres Marktes
       whereClause.marketId = req.user.marketId
@@ -156,8 +131,8 @@ router.get('/', authenticateToken, async (req: Request, res: Response) => {
     console.log(`[users:list] count=${users.length}`)
 
     res.json({
-      success: true,
-      users
+      items: users,
+      total: users.length
     })
 
   } catch (error) {
@@ -176,7 +151,7 @@ router.get('/:id', authenticateToken, async (req: Request, res: Response) => {
     const userId = parseInt(req.params.id)
     
     // Berechtigung prüfen
-    if (req.user.role === 'employee' && req.user.userId !== userId) {
+    if (req.user.role === 'employee' && req.user.id !== userId) {
       return res.status(403).json({ error: 'Keine Berechtigung für diesen Benutzer' })
     }
 
@@ -212,7 +187,6 @@ router.get('/:id', authenticateToken, async (req: Request, res: Response) => {
     }
 
     res.json({
-      success: true,
       user
     })
 
@@ -232,7 +206,7 @@ router.put('/:id', authenticateToken, async (req: Request, res: Response) => {
     const userId = parseInt(req.params.id)
     
     // Berechtigung prüfen
-    if (req.user.role === 'employee' && req.user.userId !== userId) {
+    if (req.user.role === 'employee' && req.user.id !== userId) {
       return res.status(403).json({ error: 'Keine Berechtigung für diesen Benutzer' })
     }
 
@@ -292,7 +266,6 @@ router.put('/:id', authenticateToken, async (req: Request, res: Response) => {
     })
 
     res.json({
-      success: true,
       message: 'Benutzer erfolgreich aktualisiert',
       user: updatedUser
     })
@@ -302,6 +275,45 @@ router.put('/:id', authenticateToken, async (req: Request, res: Response) => {
     res.status(500).json({ 
       error: 'Interner Server-Fehler beim Aktualisieren des Benutzers' 
     })
+  }
+})
+
+/**
+ * PUT /api/users/:id/password - Passwort ändern
+ */
+router.put('/:id/password', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const id = Number(req.params.id)
+    const { password } = req.body ?? {}
+    
+    if (!Number.isFinite(id)) {
+      return res.status(400).json({ error: 'invalid id' })
+    }
+    
+    if (typeof password !== 'string' || password.length < 6) {
+      return res.status(400).json({ error: 'password too short' })
+    }
+
+    // Nur Admin oder der Benutzer selbst
+    const me = req.user as { id: number; role: string }
+    if (!me) {
+      return res.status(401).json({ error: 'unauthorized' })
+    }
+    
+    if (me.role !== 'admin' && me.id !== id) {
+      return res.status(403).json({ error: 'forbidden' })
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10)
+    await prisma.user.update({
+      where: { id },
+      data: { passwordHash },
+    })
+
+    return res.json({ ok: true })
+  } catch (err) {
+    console.error('[users:password]', err)
+    return res.status(500).json({ error: 'internal_error' })
   }
 })
 

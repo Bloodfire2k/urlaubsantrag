@@ -6,29 +6,10 @@
  */
 
 import { Router, Request, Response } from 'express'
-import jwt from 'jsonwebtoken'
 import { prisma } from '../../lib/prisma'
+import { authenticateToken } from '../middleware/auth/jwtAuth'
 
 const router = Router()
-const JWT_SECRET = process.env.JWT_SECRET || (() => { throw new Error('JWT_SECRET environment variable is required') })()
-
-// Middleware für JWT-Authentifizierung
-const authenticateToken = (req: Request, res: Response, next: any) => {
-  const authHeader = req.headers.authorization
-  const token = authHeader && authHeader.split(' ')[1]
-
-  if (!token) {
-    return res.status(401).json({ error: 'Kein Token bereitgestellt' })
-  }
-
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET) as any
-    req.user = decoded
-    next()
-  } catch (error) {
-    return res.status(403).json({ error: 'Ungültiger Token' })
-  }
-}
 
 /**
  * Hilfsfunktion: Berechnet Datumsbereich für Jahr-Filterung
@@ -51,7 +32,7 @@ router.get('/counts', authenticateToken, async (req: Request, res: Response) => 
     
     if (req.user.role === 'employee') {
       // Mitarbeiter sehen nur ihre eigenen Anträge
-      userFilter.id = req.user.userId
+      userFilter.id = req.user.id
     } else if (req.user.role === 'manager') {
       // Manager sehen nur Anträge ihres Marktes
       userFilter.marketId = req.user.marketId
@@ -108,8 +89,9 @@ router.get('/counts', authenticateToken, async (req: Request, res: Response) => 
     console.log(`[vacations:counts] total=${total}, offen=${offen}, genehmigt=${genehmigt}, abgelehnt=${abgelehnt}`)
 
     res.json({
-      success: true,
-      counts: { total, offen, genehmigt, abgelehnt }
+      pending: offen,
+      approved: genehmigt,
+      rejected: abgelehnt
     })
 
   } catch (error) {
@@ -124,21 +106,25 @@ router.get('/counts', authenticateToken, async (req: Request, res: Response) => 
  * GET /api/urlaub - Gefilterte Urlaubsanträge
  * 
  * Query-Parameter:
+ * - status: Filtert nach Status (offen, genehmigt, abgelehnt)
  * - year: Filtert nach Jahr (überschneidende Anträge)
  * - market_id: Filtert nach Markt-ID der Mitarbeiter
  * - department: Filtert nach Abteilung der Mitarbeiter
  * - activeOnly: Nur von aktiven Mitarbeitern (true/false)
+ * - mitarbeiterId: Filtert nach spezifischem Mitarbeiter
+ * - from: Startdatum (YYYY-MM-DD)
+ * - to: Enddatum (YYYY-MM-DD)
  */
 router.get('/', authenticateToken, async (req: Request, res: Response) => {
   try {
-    const { year, market_id, department, activeOnly } = req.query
+    const { status, year, market_id, department, activeOnly, mitarbeiterId, from, to } = req.query
     
     // Basis-Filter für Benutzer basierend auf Rolle
     let userFilter: any = {}
     
     if (req.user.role === 'employee') {
       // Mitarbeiter sehen nur ihre eigenen Anträge
-      userFilter.id = req.user.userId
+      userFilter.id = req.user.id
     } else if (req.user.role === 'manager') {
       // Manager sehen nur Anträge ihres Marktes
       userFilter.marketId = req.user.marketId
@@ -146,6 +132,10 @@ router.get('/', authenticateToken, async (req: Request, res: Response) => {
     // Admins sehen alle Anträge (keine Benutzer-Filter)
 
     // Zusätzliche Query-Filter für Benutzer
+    if (mitarbeiterId) {
+      userFilter.id = parseInt(mitarbeiterId as string)
+    }
+    
     if (market_id) {
       userFilter.marketId = parseInt(market_id as string)
     }
@@ -158,7 +148,7 @@ router.get('/', authenticateToken, async (req: Request, res: Response) => {
       userFilter.isActive = true
     }
 
-    // Datums-Filter für Jahr
+    // Datums-Filter für Jahr oder spezifischen Bereich
     let dateFilter: any = {}
     if (year) {
       const yearNum = parseInt(year as string)
@@ -172,14 +162,29 @@ router.get('/', authenticateToken, async (req: Request, res: Response) => {
           { startDate: { lte: endOfYear } }
         ]
       }
+    } else if (from || to) {
+      // Spezifischer Datumsbereich
+      if (from) {
+        dateFilter.startDate = { gte: new Date(from as string) }
+      }
+      if (to) {
+        dateFilter.endDate = { lte: new Date(to as string) }
+      }
     }
 
-    console.log('[vacations:list] Filter:', { userFilter, dateFilter })
+    // Status-Filter
+    let statusFilter: any = {}
+    if (status) {
+      statusFilter.status = status as string
+    }
+
+    console.log('[vacations:list] Filter:', { userFilter, dateFilter, statusFilter })
 
     const urlaubAntraege = await prisma.vacation.findMany({
       where: {
         user: userFilter,
-        ...dateFilter
+        ...dateFilter,
+        ...statusFilter
       },
       include: {
         user: {
@@ -227,8 +232,8 @@ router.get('/', authenticateToken, async (req: Request, res: Response) => {
     console.log(`[vacations:list] count=${transformedAntraege.length}`)
 
     res.json({
-      success: true,
-      urlaubAntraege: transformedAntraege
+      items: transformedAntraege,
+      total: transformedAntraege.length
     })
 
   } catch (error) {
@@ -271,7 +276,7 @@ router.get('/:id', authenticateToken, async (req: Request, res: Response) => {
     }
 
     // Berechtigung prüfen
-    if (req.user.role === 'employee' && antrag.userId !== req.user.userId) {
+    if (req.user.role === 'employee' && antrag.userId !== req.user.id) {
       return res.status(403).json({ error: 'Keine Berechtigung für diesen Antrag' })
     }
 
@@ -300,7 +305,6 @@ router.get('/:id', authenticateToken, async (req: Request, res: Response) => {
     }
 
     res.json({
-      success: true,
       urlaubAntrag: transformedAntrag
     })
 
@@ -345,7 +349,7 @@ router.post('/', authenticateToken, async (req: Request, res: Response) => {
 
     const newAntrag = await prisma.vacation.create({
       data: {
-        userId: req.user.userId,
+        userId: req.user.id,
         startDate,
         endDate,
         description: bemerkung || null,
@@ -377,7 +381,6 @@ router.post('/', authenticateToken, async (req: Request, res: Response) => {
     }
 
     res.status(201).json({
-      success: true,
       message: 'Urlaubsantrag erfolgreich erstellt',
       urlaubAntrag: transformedAntrag
     })
@@ -386,6 +389,91 @@ router.post('/', authenticateToken, async (req: Request, res: Response) => {
     console.error('❌ Fehler beim Erstellen des Urlaubsantrags:', error)
     res.status(500).json({ 
       error: 'Interner Server-Fehler beim Erstellen des Urlaubsantrags' 
+    })
+  }
+})
+
+/**
+ * GET /api/urlaub/budget - Budget eines Mitarbeiters abrufen
+ */
+router.get('/budget', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const { mitarbeiterId, jahr } = req.query
+    
+    if (!mitarbeiterId || !jahr) {
+      return res.status(400).json({ 
+        error: 'mitarbeiterId und jahr sind erforderlich' 
+      })
+    }
+
+    const userId = parseInt(mitarbeiterId as string)
+    const year = parseInt(jahr as string)
+    
+    if (!Number.isFinite(userId) || !Number.isFinite(year)) {
+      return res.status(400).json({ 
+        error: 'Ungültige mitarbeiterId oder jahr' 
+      })
+    }
+
+    // Berechtigung prüfen
+    if (req.user.role === 'employee' && req.user.id !== userId) {
+      return res.status(403).json({ 
+        error: 'Keine Berechtigung für diesen Mitarbeiter' 
+      })
+    }
+
+    if (req.user.role === 'manager') {
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { marketId: true }
+      })
+      
+      if (!user || user.marketId !== req.user.marketId) {
+        return res.status(403).json({ 
+          error: 'Keine Berechtigung für diesen Mitarbeiter' 
+        })
+      }
+    }
+
+    // Datumsbereich für das Jahr
+    const { startOfYear, endOfYear } = getYearDateRange(year)
+
+    // Budget aus VacationBudget abrufen
+    const budget = await prisma.vacationBudget.findFirst({
+      where: {
+        userId,
+        year
+      }
+    })
+
+    // Genutzte Urlaubstage zählen
+    const genutztTage = await prisma.vacation.count({
+      where: {
+        userId,
+        status: 'genehmigt',
+        AND: [
+          { endDate: { gte: startOfYear } },
+          { startDate: { lte: endOfYear } }
+        ]
+      }
+    })
+
+    const budgetTage = budget?.days || 25 // Standard: 25 Tage
+    const verbleibendTage = Math.max(0, budgetTage - genutztTage)
+
+    console.log(`[vacations:budget] userId=${userId}, year=${year}, budget=${budgetTage}, genutzt=${genutztTage}, verbleibend=${verbleibendTage}`)
+
+    res.json({
+      jahr: year,
+      budgetTage,
+      genutztTage,
+      verbleibendTage
+    })
+
+  } catch (error) {
+    console.error('❌ Fehler beim Abrufen des Budgets:', error)
+    res.status(500).json({ 
+      error: 'Interner Server-Fehler beim Abrufen des Budgets' 
     })
   }
 })
