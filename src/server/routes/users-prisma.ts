@@ -19,6 +19,10 @@ const router = Router()
  */
 router.get('/counts', authenticateToken, async (req: Request, res: Response) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Nicht authentifiziert' })
+    }
+
     console.log('[users:counts] Benutzerrolle:', req.user.role)
     
     // Basis-Filter basierend auf Benutzerrolle
@@ -62,6 +66,10 @@ router.get('/counts', authenticateToken, async (req: Request, res: Response) => 
  */
 router.get('/', authenticateToken, async (req: Request, res: Response) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Nicht authentifiziert' })
+    }
+
     const { role, marketId, q, limit = '100', offset = '0' } = req.query
     
     // Basis-Filter basierend auf Benutzerrolle
@@ -111,6 +119,8 @@ router.get('/', authenticateToken, async (req: Request, res: Response) => {
           role: true,
           department: true,
           marketId: true,
+          isActive: true,
+          annualLeaveDays: true,
           createdAt: true,
           market: { 
             select: { 
@@ -125,10 +135,25 @@ router.get('/', authenticateToken, async (req: Request, res: Response) => {
       })
     ])
 
-    console.log(`[users:list] sending ${users.length} of total=${total}`)
+    // Daten für Frontend-Kompatibilität transformieren (snake_case)
+    const items = users.map((u: any) => ({
+      id: u.id,
+      username: u.username,
+      email: u.email,
+      fullName: u.fullName,
+      role: u.role,
+      department: u.department,
+      market_id: u.marketId,          // UI erwartet snake_case
+      is_active: u.isActive,          // UI erwartet snake_case
+      annualLeaveDays: u.annualLeaveDays ?? 25,
+      createdAt: u.createdAt,
+      market: u.market
+    }))
+
+    console.log(`[users:list] sending ${items.length} of total=${total}`)
 
     res.json({
-      items: users,
+      items: items,
       total: total
     })
 
@@ -147,6 +172,10 @@ router.get('/', authenticateToken, async (req: Request, res: Response) => {
  */
 router.get('/:id', authenticateToken, async (req: Request, res: Response) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Nicht authentifiziert' })
+    }
+
     const userId = parseInt(req.params.id)
     
     // Berechtigung prüfen
@@ -163,6 +192,8 @@ router.get('/:id', authenticateToken, async (req: Request, res: Response) => {
         fullName: true,
         role: true,
         marketId: true,
+        isActive: true,
+        annualLeaveDays: true,
         createdAt: true,
         market: {
           select: {
@@ -199,6 +230,10 @@ router.get('/:id', authenticateToken, async (req: Request, res: Response) => {
  */
 router.put('/:id', authenticateToken, async (req: Request, res: Response) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Nicht authentifiziert' })
+    }
+
     const userId = parseInt(req.params.id)
     
     // Berechtigung prüfen
@@ -223,7 +258,9 @@ router.put('/:id', authenticateToken, async (req: Request, res: Response) => {
       department, 
       isActive, 
       role, 
-      marketId 
+      marketId,
+      urlaubsanspruch,
+      annualLeaveDays
     } = req.body
 
     // Nur Admins können Rollen und Märkte ändern
@@ -232,6 +269,10 @@ router.put('/:id', authenticateToken, async (req: Request, res: Response) => {
     if (fullName !== undefined) updateData.fullName = fullName
     if (department !== undefined) updateData.department = department
     if (isActive !== undefined) updateData.isActive = isActive
+    
+    // Urlaubsanspruch mappen (vom Frontend)
+    const annualLeaveDaysValue = Number(urlaubsanspruch ?? annualLeaveDays ?? 25)
+    updateData.annualLeaveDays = annualLeaveDaysValue
     
     if (req.user.role === 'admin') {
       if (role !== undefined) updateData.role = role
@@ -248,6 +289,8 @@ router.put('/:id', authenticateToken, async (req: Request, res: Response) => {
         fullName: true,
         role: true,
         marketId: true,
+        isActive: true,
+        annualLeaveDays: true,
         createdAt: true,
         market: {
           select: {

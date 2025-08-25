@@ -436,7 +436,13 @@ router.get('/budget', authenticateToken, async (req: Request, res: Response) => 
 
     const user = await prisma.user.findUnique({
       where: { id: mitarbeiterId },
-      select: { id: true, fullName: true, department: true, marketId: true },
+      select: { 
+        id: true, 
+        fullName: true, 
+        department: true, 
+        marketId: true,
+        annualLeaveDays: true
+      },
     });
     if (!user) return res.status(404).json({ error: 'user_not_found' });
 
@@ -454,7 +460,7 @@ router.get('/budget', authenticateToken, async (req: Request, res: Response) => 
     });
 
     const usedDays = vacations.reduce((sum: number, v: { startDate: Date; endDate: Date }) => sum + daysInclusive(v.startDate, v.endDate), 0);
-    const budgetDays = DEFAULT_BUDGET_DAYS;
+    const budgetDays = user.annualLeaveDays ?? DEFAULT_BUDGET_DAYS;
     const remainingDays = Math.max(budgetDays - usedDays, 0);
 
     return res.json({
@@ -505,7 +511,13 @@ router.get('/budget/all', authenticateToken, async (req: Request, res: Response)
 
     const users = await prisma.user.findMany({
       where: userFilter,
-      select: { id: true, fullName: true, department: true, marketId: true },
+      select: { 
+        id: true, 
+        fullName: true, 
+        department: true, 
+        marketId: true,
+        annualLeaveDays: true
+      },
     });
 
     // Alle genehmigten Urlaube im Jahr holen und pro User summieren
@@ -522,9 +534,9 @@ router.get('/budget/all', authenticateToken, async (req: Request, res: Response)
       usedByUser.set(v.userId, (usedByUser.get(v.userId) ?? 0) + daysInclusive(v.startDate, v.endDate));
     }
 
-    const items = users.map((u: { id: number; fullName: string | null; department: string | null; marketId: number }) => {
+    const items = users.map((u: { id: number; fullName: string | null; department: string | null; marketId: number; annualLeaveDays: number | null }) => {
       const used = usedByUser.get(u.id) ?? 0;
-      const budgetDays = DEFAULT_BUDGET_DAYS;
+      const budgetDays = u.annualLeaveDays ?? DEFAULT_BUDGET_DAYS;
       return {
         userId: u.id,
         fullName: u.fullName ?? '',

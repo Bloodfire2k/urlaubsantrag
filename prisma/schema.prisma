@@ -42,6 +42,7 @@ model User {
   marketId   Int      @map("market_id")
   department String
   isActive   Boolean  @default(true) @map("is_active")
+  annualLeaveDays Int @default(25)
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
 
