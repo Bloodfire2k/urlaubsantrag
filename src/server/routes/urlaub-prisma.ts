@@ -395,86 +395,130 @@ router.post('/', authenticateToken, async (req: Request, res: Response) => {
 
 /**
  * GET /api/urlaub/budget - Budget eines Mitarbeiters abrufen
+ * GET /api/urlaub/budget/all - Budget aller Mitarbeiter abrufen
  */
-router.get('/budget', authenticateToken, async (req: Request, res: Response) => {
+router.get(['/budget', '/budget/all'], authenticateToken, async (req: Request, res: Response, next: any) => {
   try {
-    const { mitarbeiterId, jahr } = req.query
-    
-    if (!mitarbeiterId || !jahr) {
-      return res.status(400).json({ 
-        error: 'mitarbeiterId und jahr sind erforderlich' 
-      })
-    }
+    const jahr = Number(req.query.jahr) || new Date().getFullYear();
+    const mitarbeiterId = req.query.mitarbeiterId ? Number(req.query.mitarbeiterId) : undefined;
+    const yearStart = new Date(`${jahr}-01-01T00:00:00.000Z`);
+    const yearEnd   = new Date(`${jahr}-12-31T23:59:59.999Z`);
 
-    const userId = parseInt(mitarbeiterId as string)
-    const year = parseInt(jahr as string)
-    
-    if (!Number.isFinite(userId) || !Number.isFinite(year)) {
-      return res.status(400).json({ 
-        error: 'Ungültige mitarbeiterId oder jahr' 
-      })
-    }
-
-    // Berechtigung prüfen
-    if (req.user.role === 'employee' && req.user.id !== userId) {
-      return res.status(403).json({ 
-        error: 'Keine Berechtigung für diesen Mitarbeiter' 
-      })
-    }
-
-    if (req.user.role === 'manager') {
+    // SINGLE: wenn ?mitarbeiterId übergeben ist -> eine Person
+    if (mitarbeiterId) {
       const user = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { marketId: true }
-      })
-      
-      if (!user || user.marketId !== req.user.marketId) {
+        where: { id: mitarbeiterId },
+        include: { market: true },
+      });
+      if (!user) return res.status(404).json({ error: 'user_not_found' });
+
+      // Berechtigung prüfen
+      if (req.user.role === 'employee' && req.user.id !== mitarbeiterId) {
         return res.status(403).json({ 
           error: 'Keine Berechtigung für diesen Mitarbeiter' 
         })
       }
+
+      if (req.user.role === 'manager') {
+        if (user.marketId !== req.user.marketId) {
+          return res.status(403).json({ 
+            error: 'Keine Berechtigung für diesen Mitarbeiter' 
+          })
+        }
+      }
+
+      const vacations = await prisma.vacation.findMany({
+        where: { 
+          userId: user.id, 
+          status: 'genehmigt', 
+          startDate: { gte: yearStart, lte: yearEnd } 
+        },
+        select: { days: true, startDate: true, endDate: true },
+      });
+
+      const genommen = vacations.reduce((sum, v: any) => {
+        if (typeof v.days === 'number') return sum + v.days;
+        // Fallback: Tage aus Datumsspanne schätzen
+        const start = new Date(v.startDate).getTime();
+        const end   = new Date(v.endDate).getTime();
+        const diff  = Math.max(0, Math.round((end - start) / (1000*60*60*24)) + 1);
+        return sum + diff;
+      }, 0);
+
+      const anspruch =
+        (user as any).urlaubstageAnspruch ??
+        (user as any).urlaubstage ??
+        (user as any).annualLeaveDays ?? 25; // Standard: 25 Tage
+
+      const payload = {
+        jahr,
+        userId: user.id,
+        fullName: (user as any).fullName ?? `${(user as any).firstName ?? ''} ${(user as any).lastName ?? ''}`.trim(),
+        marketId: user.marketId ?? null,
+        marketName: user.market?.name ?? null,
+        budgetTage: Number(anspruch) || 25,
+        genommenTage: Number(genommen) || 0,
+        verbleibendTage: Math.max(0, (Number(anspruch) || 25) - (Number(genommen) || 0)),
+      };
+      return res.json(payload);
     }
 
-    // Datumsbereich für das Jahr
-    const { startOfYear, endOfYear } = getYearDateRange(year)
+    // ALL: ohne mitarbeiterId -> Liste für alle Mitarbeitenden
+    // Berechtigung prüfen - nur Admins und Manager
+    if (req.user.role === 'employee') {
+      return res.status(403).json({ 
+        error: 'Keine Berechtigung für alle Budgets' 
+      })
+    }
 
-    // Budget aus VacationBudget abrufen
-    const budget = await prisma.vacationBudget.findFirst({
-      where: {
-        userId,
-        year
-      }
-    })
+    let userFilter: any = {}
+    if (req.user.role === 'manager') {
+      userFilter.marketId = req.user.marketId
+    }
 
-    // Genutzte Urlaubstage zählen
-    const genutztTage = await prisma.vacation.count({
-      where: {
-        userId,
-        status: 'genehmigt',
-        AND: [
-          { endDate: { gte: startOfYear } },
-          { startDate: { lte: endOfYear } }
-        ]
-      }
-    })
+    const users = await prisma.user.findMany({
+      where: userFilter,
+      include: { market: true },
+    });
 
-    const budgetTage = budget?.days || 25 // Standard: 25 Tage
-    const verbleibendTage = Math.max(0, budgetTage - genutztTage)
+    // Alle genehmigten Urlaube im Jahr holen und pro User summieren
+    const vacations = await prisma.vacation.findMany({
+      where: { 
+        status: 'genehmigt', 
+        startDate: { gte: yearStart, lte: yearEnd } 
+      },
+      select: { userId: true, days: true, startDate: true, endDate: true },
+    });
 
-    console.log(`[vacations:budget] userId=${userId}, year=${year}, budget=${budgetTage}, genutzt=${genutztTage}, verbleibend=${verbleibendTage}`)
+    const takenByUser = new Map<number, number>();
+    for (const v of vacations as any[]) {
+      const t = typeof v.days === 'number'
+        ? v.days
+        : Math.max(0, Math.round((new Date(v.endDate).getTime() - new Date(v.startDate).getTime())/(1000*60*60*24)) + 1);
+      takenByUser.set(v.userId, (takenByUser.get(v.userId) || 0) + (t || 0));
+    }
 
-    res.json({
-      jahr: year,
-      budgetTage,
-      genutztTage,
-      verbleibendTage
-    })
+    const items = users.map(u => {
+      const anspruch =
+        (u as any).urlaubstageAnspruch ??
+        (u as any).urlaubstage ??
+        (u as any).annualLeaveDays ?? 25; // Standard: 25 Tage
+      const genommen = takenByUser.get(u.id) || 0;
+      return {
+        userId: u.id,
+        fullName: (u as any).fullName ?? `${(u as any).firstName ?? ''} ${(u as any).lastName ?? ''}`.trim(),
+        marketId: u.marketId ?? null,
+        marketName: u.market?.name ?? null,
+        budgetTage: Number(anspruch) || 25,
+        genommenTage: Number(genommen) || 0,
+        verbleibendTage: Math.max(0, (Number(anspruch) || 25) - (Number(genommen) || 0)),
+      };
+    });
 
-  } catch (error) {
-    console.error('❌ Fehler beim Abrufen des Budgets:', error)
-    res.status(500).json({ 
-      error: 'Interner Server-Fehler beim Abrufen des Budgets' 
-    })
+    return res.json({ jahr, total: items.length, items });
+  } catch (err) { 
+    console.error('[vacations:budget]', err);
+    next(err); 
   }
 })
 
