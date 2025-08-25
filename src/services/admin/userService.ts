@@ -9,7 +9,8 @@ export const userService = {
       throw new Error('Kein Token gefunden')
     }
 
-    const response = await apiFetch(`/users/counts`, {
+    const response = await apiFetch(`/users/counts?t=${Date.now()}`, {
+      cache: 'no-store',
       headers: {
         'Authorization': `Bearer ${token}`
       }
@@ -43,19 +44,45 @@ export const userService = {
     if (params?.role) queryParams.append('role', params.role)
     if (params?.department) queryParams.append('department', params.department)
     if (params?.activeOnly !== undefined) queryParams.append('activeOnly', params.activeOnly.toString())
+    
+    // Query-Buster hinzufügen um Cache zu verhindern
+    queryParams.append('t', Date.now().toString())
 
     const queryString = queryParams.toString()
     const url = `/users${queryString ? `?${queryString}` : ''}`
 
     const response = await apiFetch(url, {
+      cache: 'no-store',
       headers: {
         'Authorization': `Bearer ${token}`
       }
     })
 
+    // Bei 304-Response bestehenden Zustand beibehalten
+    if (response.status === 304) {
+      // Hier würden wir den vorherigen Zustand zurückgeben
+      // Da wir keinen Zugriff auf prevUsers haben, werfen wir einen Fehler
+      throw new Error('Daten nicht geändert (304) - bitte erneut versuchen')
+    }
+
     if (response.ok) {
       const data = await response.json()
-      return data.users || []
+      
+      // JSON-Response mappen: snake_case → camelCase
+      const users = (data.users || []).map((user: any) => ({
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        fullName: user.full_name,
+        role: user.role,
+        market_id: user.market_id,
+        department: user.department,
+        is_active: user.is_active,
+        created_at: user.created_at,
+        updated_at: user.updated_at
+      }))
+      
+      return users
     } else {
       throw new Error(`Fehler beim Laden: ${response.status} ${response.statusText}`)
     }
