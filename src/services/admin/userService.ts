@@ -1,26 +1,31 @@
 import { User, UserFormData } from '../../types/admin/user'
-import { apiFetch } from '../../lib/api'
+import { httpGetJson } from '../../lib/http'
+
+// Hilfsfunktion für fetch mit Token
+function fetchWithToken(url: string, options: RequestInit = {}) {
+  const token = localStorage.getItem('urlaub_token')
+  if (!token) {
+    throw new Error('Kein gültiges Token gefunden')
+  }
+  
+  return fetch(url, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+      ...options.headers,
+    },
+  })
+}
 
 export const userService = {
   // Benutzer-Counts für Dashboard laden
   async fetchUserCounts(): Promise<{ total: number; admins: number; managers: number; mitarbeiter: number }> {
-    const token = localStorage.getItem('urlaub_token')
-    if (!token) {
-      throw new Error('Kein Token gefunden')
-    }
-
-    const response = await apiFetch(`/users/counts?t=${Date.now()}`, {
-      cache: 'no-store',
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    })
-
-    if (response.ok) {
-      const data = await response.json()
+    try {
+      const data = await httpGetJson('/users/counts')
       return data.counts || { total: 0, admins: 0, managers: 0, mitarbeiter: 0 }
-    } else {
-      throw new Error(`Fehler beim Laden der Counts: ${response.status} ${response.statusText}`)
+    } catch (error) {
+      throw new Error(`Fehler beim Laden der Counts: ${error}`)
     }
   },
 
@@ -32,41 +37,19 @@ export const userService = {
     department?: string;
     activeOnly?: boolean;
   }): Promise<User[]> {
-    const token = localStorage.getItem('urlaub_token')
-    if (!token) {
-      throw new Error('Kein Token gefunden')
-    }
+    try {
+      // Query-Parameter aufbauen
+      const queryParams = new URLSearchParams()
+      if (params?.search) queryParams.append('search', params.search)
+      if (params?.marketId) queryParams.append('marketId', params.marketId.toString())
+      if (params?.role) queryParams.append('role', params.role)
+      if (params?.department) queryParams.append('department', params.department)
+      if (params?.activeOnly !== undefined) queryParams.append('activeOnly', params.activeOnly.toString())
 
-    // Query-Parameter aufbauen
-    const queryParams = new URLSearchParams()
-    if (params?.search) queryParams.append('search', params.search)
-    if (params?.marketId) queryParams.append('marketId', params.marketId.toString())
-    if (params?.role) queryParams.append('role', params.role)
-    if (params?.department) queryParams.append('department', params.department)
-    if (params?.activeOnly !== undefined) queryParams.append('activeOnly', params.activeOnly.toString())
-    
-    // Query-Buster hinzufügen um Cache zu verhindern
-    queryParams.append('t', Date.now().toString())
+      const queryString = queryParams.toString()
+      const url = `/users${queryString ? `?${queryString}` : ''}`
 
-    const queryString = queryParams.toString()
-    const url = `/users${queryString ? `?${queryString}` : ''}`
-
-    const response = await apiFetch(url, {
-      cache: 'no-store',
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    })
-
-    // Bei 304-Response bestehenden Zustand beibehalten
-    if (response.status === 304) {
-      // Hier würden wir den vorherigen Zustand zurückgeben
-      // Da wir keinen Zugriff auf prevUsers haben, werfen wir einen Fehler
-      throw new Error('Daten nicht geändert (304) - bitte erneut versuchen')
-    }
-
-    if (response.ok) {
-      const data = await response.json()
+      const data = await httpGetJson(url)
       
       // JSON-Response mappen: snake_case → camelCase
       const users = (data.users || []).map((user: any) => ({
@@ -83,8 +66,8 @@ export const userService = {
       }))
       
       return users
-    } else {
-      throw new Error(`Fehler beim Laden: ${response.status} ${response.statusText}`)
+    } catch (error) {
+      throw new Error(`Fehler beim Laden der Benutzer: ${error}`)
     }
   },
 
@@ -95,12 +78,8 @@ export const userService = {
       throw new Error('Kein gültiges Token gefunden')
     }
 
-    const response = await apiFetch(`/auth/register`, {
+    const response = await fetchWithToken(`/auth/register`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
       body: JSON.stringify({
         username: userData.username,
         email: `${userData.username}@${userData.marketId === 2 ? 'ecenter' : 'edeka'}.de`,
@@ -128,12 +107,8 @@ export const userService = {
       throw new Error('Kein gültiges Token gefunden')
     }
 
-    const response = await apiFetch(`/users/${userId}`, {
+    const response = await fetchWithToken(`/users/${userId}`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
       body: JSON.stringify(updates)
     })
 
@@ -153,12 +128,8 @@ export const userService = {
     // Neues zufälliges Passwort generieren
     const newPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8)
 
-    const response = await apiFetch(`/users/${userId}/password`, {
+    const response = await fetchWithToken(`/users/${userId}/password`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
       body: JSON.stringify({ password: newPassword })
     })
 
@@ -177,12 +148,8 @@ export const userService = {
       throw new Error('Kein gültiges Token gefunden')
     }
 
-    const response = await apiFetch(`/users/${userId}/password`, {
+    const response = await fetchWithToken(`/users/${userId}/password`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
       body: JSON.stringify({ password })
     })
 
@@ -205,11 +172,8 @@ export const userService = {
     
     const method = isActive ? 'DELETE' : 'POST'
 
-    const response = await apiFetch(url, {
-      method: method,
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
+    const response = await fetchWithToken(url, {
+      method: method
     })
 
     if (!response.ok) {
@@ -225,11 +189,8 @@ export const userService = {
       throw new Error('Kein gültiges Token gefunden')
     }
 
-    const response = await apiFetch(`/users/${userId}/permanent-delete`, {
-      method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
+    const response = await fetchWithToken(`/users/${userId}/permanent-delete`, {
+      method: 'DELETE'
     })
 
     if (!response.ok) {

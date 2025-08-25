@@ -1,7 +1,24 @@
 import React, { createContext, useContext, useReducer, useEffect, useRef } from 'react'
 import { User, LoginCredentials, AuthState, RegisterData } from '../types/auth'
 
-import { apiFetch } from '../lib/api'
+import { httpGetJson } from '../lib/http'
+
+// Hilfsfunktion für fetch mit Token
+function fetchWithToken(url: string, options: RequestInit = {}) {
+  const token = localStorage.getItem('urlaub_token')
+  if (!token) {
+    throw new Error('Kein gültiges Token gefunden')
+  }
+  
+  return fetch(url, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+      ...options.headers,
+    },
+  })
+}
 
 interface AuthContextType extends AuthState {
   login: (credentials: LoginCredentials) => Promise<boolean>
@@ -86,11 +103,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     dispatch({ type: 'LOGIN_START' })
 
     try {
-      const response = await apiFetch(`/auth/login`, {
+      const response = await fetchWithToken(`/auth/login`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify(credentials),
       })
 
@@ -134,11 +148,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     dispatch({ type: 'REGISTER_START' })
 
     try {
-      const response = await apiFetch(`/auth/register`, {
+      const response = await fetchWithToken(`/auth/register`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify(data),
       })
 

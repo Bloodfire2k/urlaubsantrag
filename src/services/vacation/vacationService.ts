@@ -1,23 +1,16 @@
 import { Market, User, Urlaub } from '../../types/vacation'
-import { apiFetch } from '../../lib/api'
+import { httpGetJson } from '../../lib/http'
 import { fetchUsersList } from '../../lib/users'
 
 export const vacationService = {
   // Märkte laden
   async fetchMarkets(token: string): Promise<Market[]> {
-    const response = await apiFetch(`/markets`, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
-    })
-
-    if (response.ok) {
-      const data = await response.json()
+    try {
+      const data = await httpGetJson('/markets')
       const marketsArray = data.markets || []
       return Array.isArray(marketsArray) ? marketsArray : []
-    } else {
-      console.error('Markets API error:', response.status)
+    } catch (error) {
+      console.error('Markets API error:', error)
       return []
     }
   },
@@ -35,43 +28,29 @@ export const vacationService = {
 
   // Urlaubsdaten laden
   async fetchUrlaube(token: string, year: number): Promise<Urlaub[]> {
-    const response = await apiFetch(`/urlaub?year=${year}`, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
-    })
-
-    if (response.ok) {
-      const data = await response.json()
+    try {
+      const data = await httpGetJson(`/urlaub?year=${year}`)
       const urlaubeArray = data.urlaubAntraege || []
       return Array.isArray(urlaubeArray) ? urlaubeArray : []
-    } else {
-      console.error('Urlaube API error:', response.status)
+    } catch (error) {
+      console.error('Urlaube API error:', error)
       return []
     }
   },
 
   // Urlaub-Counts für Dashboard laden
   async fetchVacationCounts(token: string, year?: number): Promise<{ total: number; offen: number; genehmigt: number; abgelehnt: number }> {
-    const queryParams = new URLSearchParams()
-    if (year) queryParams.append('year', year.toString())
-    
-    const queryString = queryParams.toString()
-    const url = `/urlaub/counts${queryString ? `?${queryString}` : ''}`
+    try {
+      const queryParams = new URLSearchParams()
+      if (year) queryParams.append('year', year.toString())
+      
+      const queryString = queryParams.toString()
+      const url = `/urlaub/counts${queryString ? `?${queryString}` : ''}`
 
-    const response = await apiFetch(url, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
-    })
-
-    if (response.ok) {
-      const data = await response.json()
+      const data = await httpGetJson(url)
       return data.counts || { total: 0, offen: 0, genehmigt: 0, abgelehnt: 0 }
-    } else {
-      console.error('Vacation counts API error:', response.status)
+    } catch (error) {
+      console.error('Vacation counts API error:', error)
       return { total: 0, offen: 0, genehmigt: 0, abgelehnt: 0 }
     }
   }

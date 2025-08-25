@@ -4,7 +4,24 @@ import { userService } from '../../services/admin/userService'
 import { fetchUsersList } from '../../lib/users'
 import { useAuth } from '../../contexts/AuthContext'
 import { useYear } from '../../contexts/YearContext'
-import { apiFetch } from '../../lib/api'
+import { httpGetJson } from '../../lib/http'
+
+// Hilfsfunktion für fetch mit Token
+function fetchWithToken(url: string, options: RequestInit = {}) {
+  const token = localStorage.getItem('urlaub_token')
+  if (!token) {
+    throw new Error('Kein gültiges Token gefunden')
+  }
+  
+  return fetch(url, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+      ...options.headers,
+    },
+  })
+}
 
 export const useUserManagement = () => {
   const { getToken } = useAuth()
@@ -53,7 +70,7 @@ export const useUserManagement = () => {
         const nachNameB = namePartsB.length > 1 ? namePartsB[namePartsB.length - 1] : b.fullName
         return nachNameA.localeCompare(nachNameB, 'de', { sensitivity: 'base' })
       })
-      setUsers(sortedUsers)
+      setUsers(result.items)
     } catch (error) {
       console.error('Fehler beim Laden der Benutzer:', error)
     } finally {
@@ -129,12 +146,7 @@ export const useUserManagement = () => {
     // Dann asynchron das Budget laden und das Formular aktualisieren
     try {
       console.log('Lade Budget für User:', user.id, 'Jahr:', selectedYear)
-      const response = await apiFetch(`/urlaub/budget/all?jahr=${selectedYear}&t=${Date.now()}`, {
-        headers: {
-          'Authorization': `Bearer ${getToken()}`,
-          'Cache-Control': 'no-cache'
-        }
-      })
+      const response = await fetchWithToken(`/urlaub/budget/all?jahr=${selectedYear}&t=${Date.now()}`)
       if (response.ok) {
         const budgetData = await response.json()
         console.log('Budget-Daten erhalten:', budgetData)
@@ -230,16 +242,12 @@ export const useUserManagement = () => {
       try {
         console.log('Aktualisiere Budget für User:', editingUser.id, 'auf', userForm.urlaubsanspruch, 'Tage')
 
-        const response = await apiFetch(`/urlaub/budget/${editingUser.id}/${selectedYear}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${getToken()}`
-          },
-          body: JSON.stringify({
-            jahresanspruch: userForm.urlaubsanspruch
-          })
+              const response = await fetchWithToken(`/urlaub/budget/${editingUser.id}/${selectedYear}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          jahresanspruch: userForm.urlaubsanspruch
         })
+      })
         
         if (!response.ok) {
           const errorText = await response.text()
@@ -249,12 +257,7 @@ export const useUserManagement = () => {
           console.log('Budget erfolgreich aktualisiert:', result)
           
           // Frisch nachladen zur Bestätigung
-          const freshResponse = await apiFetch(`/urlaub/budget/${editingUser.id}/${selectedYear}`, {
-            headers: {
-              'Authorization': `Bearer ${getToken()}`,
-              'Cache-Control': 'no-cache'
-            }
-          })
+                  const freshResponse = await fetchWithToken(`/urlaub/budget/${editingUser.id}/${selectedYear}`)
           if (freshResponse.ok) {
             const freshBudget = await freshResponse.json()
             console.log('Frisch geladenes Budget:', freshBudget)

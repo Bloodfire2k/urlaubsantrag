@@ -2,8 +2,25 @@ import React, { useState, useEffect } from 'react'
 import { Calendar, Clock, CheckCircle, AlertCircle, User, ChevronRight, Users } from 'lucide-react'
 import { useYear } from '../contexts/YearContext'
 import { calculateWorkingDays } from '../utils/vacationCalculator'
-import { apiFetch } from '../../lib/api'
+import { httpGetJson } from '../../lib/http'
 import { fetchUsersList } from '../../lib/users'
+
+// Hilfsfunktion für fetch mit Token
+function fetchWithToken(url: string, options: RequestInit = {}) {
+  const token = localStorage.getItem('urlaub_token')
+  if (!token) {
+    throw new Error('Kein gültiges Token gefunden')
+  }
+  
+  return fetch(url, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+      ...options.headers,
+    },
+  })
+}
 
 interface Urlaub {
   id: number
@@ -71,20 +88,9 @@ const AdminUrlaubsUebersicht: React.FC = () => {
 
   const loadUrlaube = async () => {
     try {
-      const token = localStorage.getItem('urlaub_token')
-      if (!token) return
-
-      const response = await apiFetch(`/urlaub?jahr=${selectedYear}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        const urlaubAntraege = data.urlaubAntraege || []
-        setUrlaube(urlaubAntraege)
-      }
+      const data = await httpGetJson(`/urlaub?jahr=${selectedYear}`)
+      const urlaubAntraege = data.urlaubAntraege || []
+      setUrlaube(urlaubAntraege)
     } catch (error) {
       console.error('Fehler beim Laden der Urlaube:', error)
     }
@@ -101,11 +107,7 @@ const AdminUrlaubsUebersicht: React.FC = () => {
       const activeUsers = result.items.filter((user: any) => user.isActive !== false)
         const budgetPromises = activeUsers.map(async (user: any) => {
           try {
-            const budgetResponse = await apiFetch(`/urlaub/budget/${user.id}?jahr=${selectedYear}`, {
-              headers: {
-                'Authorization': `Bearer ${token}`
-              }
-            })
+            const budgetResponse = await fetchWithToken(`/urlaub/budget/${user.id}?jahr=${selectedYear}`)
             
             if (budgetResponse.ok) {
               const budgetData = await budgetResponse.json()

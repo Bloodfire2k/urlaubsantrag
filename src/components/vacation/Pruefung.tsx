@@ -7,7 +7,24 @@ import { VacationFilters } from './VacationFilters'
 import { VacationCalendar } from './VacationCalendar'
 import { NoEmployeesFound } from './NoEmployeesFound'
 import { EmployeeDetails } from '../admin/overview/EmployeeDetails'
-import { apiFetch } from '../../lib/api'
+import { httpGetJson } from '../../lib/http'
+
+// Hilfsfunktion für fetch mit Token
+function fetchWithToken(url: string, options: RequestInit = {}) {
+  const token = localStorage.getItem('urlaub_token')
+  if (!token) {
+    throw new Error('Kein gültiges Token gefunden')
+  }
+  
+  return fetch(url, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+      ...options.headers,
+    },
+  })
+}
 
 const Pruefung: React.FC = () => {
   const { selectedYear } = useYear()
@@ -69,12 +86,8 @@ const Pruefung: React.FC = () => {
     setBusyId(urlaubId);
 
     try {
-      const response = await apiFetch(`/urlaub/${urlaubId}/status`, {
+      const response = await fetchWithToken(`/urlaub/${urlaubId}/status`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
         body: JSON.stringify({ status: newStatus })
       })
 
@@ -108,11 +121,8 @@ const Pruefung: React.FC = () => {
     setBusyId(urlaubId);
 
     try {
-      const response = await apiFetch(`/urlaub/${urlaubId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+      const response = await fetchWithToken(`/urlaub/${urlaubId}`, {
+        method: 'DELETE'
       })
 
       if (!response.ok) throw new Error('API Fehler beim Löschen')

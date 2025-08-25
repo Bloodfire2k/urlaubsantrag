@@ -1,49 +1,15 @@
 import { UrlaubBudget, Urlaub, MitarbeiterStats, GlobalStats, UrlaubStatus } from '../../types/admin/overview'
 import { calculateWorkingDays } from '../../utils/vacationCalculator'
-import { apiFetch } from '../../lib/api'
+import { httpGetJson } from '../../lib/http'
 
 export const overviewService = {
   // Budgets laden
   async loadBudgets(selectedYear: number, token?: string): Promise<UrlaubBudget[]> {
     try {
-      let authToken = token
-      if (!authToken) {
-        // Fallback: Token aus dem localStorage holen
-        const storedToken = localStorage.getItem('urlaub_token')
-        if (!storedToken) {
-          throw new Error('Nicht eingeloggt')
-        }
-        authToken = storedToken
-      }
-
-      const response = await apiFetch(`/urlaub/budget/all?jahr=${selectedYear}`, {
-        headers: {
-          'Authorization': `Bearer ${authToken}`,
-          'Content-Type': 'application/json'
-        }
-      })
-
-      if (response.status === 401 || response.status === 403) {
-        // Bei Authentifizierungsproblemen zum Login weiterleiten
-        const __cur = new URL(window.location.href);
-        if (__cur.pathname !== '/login') {
-          window.location.href = '/login'
-        }
-        throw new Error('Nicht autorisiert')
-      }
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || 'Fehler beim Laden der Budgets')
-      }
-
-      const data = await response.json()
+      const data = await httpGetJson(`/urlaub/budget/all?jahr=${selectedYear}`)
       return data.budgets || []
     } catch (error) {
       console.error('Fehler beim Laden der Budgets:', error)
-      if (error instanceof Error && error.message === 'Nicht autorisiert') {
-        return []
-      }
       throw error
     }
   },

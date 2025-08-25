@@ -19,7 +19,25 @@ import AdminUrlaubsUebersichtInline from './components/admin/overview/AdminUrlau
 import Pruefung from './components/vacation/Pruefung'
 import { Urlaub, UrlaubBudget, convertUrlaubFromBackend, convertUrlaubBudgetFromBackend } from './types/urlaub'
 
-import { API_BASE, apiFetch } from './lib/api'
+import { API_BASE } from './lib/api'
+import { httpGetJson } from './lib/http'
+
+// Hilfsfunktion für fetch mit Token
+function fetchWithToken(url: string, options: RequestInit = {}) {
+  const token = localStorage.getItem('urlaub_token')
+  if (!token) {
+    throw new Error('Kein gültiges Token gefunden')
+  }
+  
+  return fetch(url, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+      ...options.headers,
+    },
+  })
+}
 
 function AppContent() {
   const { user, logout, getToken } = useAuth()
@@ -119,21 +137,10 @@ function AppContent() {
     try {
       setIsLoading(true)
       const token = localStorage.getItem('urlaub_token')
-      const response = await apiFetch(`/urlaub?t=${Date.now()}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        const urlaubAntraege = data.urlaubAntraege || []
-        const convertedUrlaube = urlaubAntraege.map(convertUrlaubFromBackend)
-        setUrlaube(convertedUrlaube)
-      } else {
-        console.error('Fehler beim Laden der Urlaube:', response.statusText)
-      }
+      const data = await httpGetJson(`/urlaub?t=${Date.now()}`)
+      const urlaubAntraege = data.urlaubAntraege || []
+      const convertedUrlaube = urlaubAntraege.map(convertUrlaubFromBackend)
+      setUrlaube(convertedUrlaube)
     } catch (error) {
       console.error('Fehler beim Laden der Urlaube:', error)
     } finally {
@@ -147,21 +154,10 @@ function AppContent() {
     try {
       setIsLoading(true)
       const token = localStorage.getItem('urlaub_token')
-      const response = await apiFetch(`/urlaub/budget/all?jahr=${selectedYear}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        if (data.budgets) {
-          const convertedBudgets = data.budgets.map(convertUrlaubBudgetFromBackend)
-          setBudgets(convertedBudgets)
-        }
-      } else {
-        console.error('Fehler beim Laden der Budgets:', response.statusText)
+      const data = await httpGetJson(`/urlaub/budget/all?jahr=${selectedYear}`)
+      if (data.budgets) {
+        const convertedBudgets = data.budgets.map(convertUrlaubBudgetFromBackend)
+        setBudgets(convertedBudgets)
       }
     } catch (error) {
       console.error('Fehler beim Laden der Budgets:', error)
@@ -185,12 +181,8 @@ function AppContent() {
 
     try {
       const token = localStorage.getItem('urlaub_token')
-      const response = await apiFetch(`/urlaub`, {
+      const response = await fetchWithToken(`/urlaub`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({
           start_datum: urlaub.startDatum,
           end_datum: urlaub.endDatum,
@@ -213,11 +205,8 @@ function AppContent() {
   const deleteUrlaub = async (id: string) => {
     try {
       const token = localStorage.getItem('urlaub_token')
-      const response = await apiFetch(`/urlaub/${id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
+      const response = await fetchWithToken(`/urlaub/${id}`, {
+        method: 'DELETE'
       })
 
       if (response.ok) {
@@ -481,11 +470,8 @@ function AppContent() {
                             for (const urlaub of rejectedUrlaube) {
                               try {
                                 console.log('🗑️ Versuche Urlaub zu löschen:', urlaub.id, 'Status:', urlaub.status)
-                                const response = await apiFetch(`/urlaub/${urlaub.id}`, {
-                                  method: 'DELETE',
-                                  headers: {
-                                    'Authorization': `Bearer ${getToken()}`
-                                  }
+                                const response = await fetchWithToken(`/urlaub/${urlaub.id}`, {
+                                  method: 'DELETE'
                                 })
                                 console.log('🗑️ Response Status:', response.status, 'OK:', response.ok)
                                 
