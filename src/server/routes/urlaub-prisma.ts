@@ -11,6 +11,9 @@ import { authenticateToken } from '../middleware/auth/jwtAuth'
 
 const router = Router()
 
+// Standard-Budget bis echte Budgets implementiert sind
+const DEFAULT_BUDGET_DAYS = 25
+
 /**
  * Hilfsfunktion: Berechnet Datumsbereich für Jahr-Filterung
  */
@@ -425,7 +428,7 @@ router.get('/budget', authenticateToken, async (req: Request, res: Response) => 
 
     const user = await prisma.user.findUnique({
       where: { id: mitarbeiterId },
-      select: { id: true, fullName: true, department: true, marketId: true, annualLeaveDays: true },
+      select: { id: true, fullName: true, department: true, marketId: true },
     });
     if (!user) return res.status(404).json({ error: 'user_not_found' });
 
@@ -439,7 +442,7 @@ router.get('/budget', authenticateToken, async (req: Request, res: Response) => 
     });
 
     const usedDays = vacations.reduce((sum, v) => sum + daysInclusive(v.startDate, v.endDate), 0);
-    const entitlement = (user.annualLeaveDays ?? 25);
+    const entitlement = DEFAULT_BUDGET_DAYS;
 
     return res.json({
       jahr,
@@ -481,7 +484,7 @@ router.get('/budget/all', authenticateToken, async (req: Request, res: Response)
 
     const users = await prisma.user.findMany({
       where: userFilter,
-      select: { id: true, fullName: true, department: true, marketId: true, annualLeaveDays: true },
+      select: { id: true, fullName: true, department: true, marketId: true },
     });
 
     // Alle genehmigten Urlaube im Jahr holen und pro User summieren
@@ -500,7 +503,7 @@ router.get('/budget/all', authenticateToken, async (req: Request, res: Response)
 
     const items = users.map(u => {
       const used = usedByUser.get(u.id) ?? 0;
-      const budget = (u.annualLeaveDays ?? 25);
+      const budget = DEFAULT_BUDGET_DAYS;
       return {
         userId: u.id,
         fullName: u.fullName ?? '',
