@@ -2,7 +2,7 @@ import jwt from 'jsonwebtoken'
 import { db } from '../database'
 
 // JWT Secret
-const JWT_SECRET = process.env.JWT_SECRET || 'ihr-super-geheimer-jwt-schluessel-2024'
+const JWT_SECRET = process.env.JWT_SECRET || (() => { throw new Error('JWT_SECRET environment variable is required') })()
 
 // Test-User erstellen
 export const createTestUser = async (role: 'admin' | 'manager' | 'employee' = 'employee') => {

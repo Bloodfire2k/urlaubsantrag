@@ -5,7 +5,7 @@ import { db } from '../database'
 const router = Router()
 
 // JWT Secret
-const JWT_SECRET = process.env.JWT_SECRET || 'ihr-super-geheimer-jwt-schluessel-2024'
+const JWT_SECRET = process.env.JWT_SECRET || (() => { throw new Error('JWT_SECRET environment variable is required') })()
 
 // Middleware für JWT-Authentifizierung
 const authenticateToken = (req: Request, res: Response, next: Function) => {

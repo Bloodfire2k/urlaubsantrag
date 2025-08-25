@@ -8,7 +8,7 @@ import { hashPassword } from '../utils/password'
 const router = Router()
 
 // JWT Secret (in Produktion sollte das in einer Umgebungsvariable gespeichert werden)
-const JWT_SECRET = process.env.JWT_SECRET || 'ihr-super-geheimer-jwt-schluessel-2024'
+const JWT_SECRET = process.env.JWT_SECRET || (() => { throw new Error('JWT_SECRET environment variable is required') })()
 
 // Login
 router.post('/login', async (req: Request, res: Response) => {
