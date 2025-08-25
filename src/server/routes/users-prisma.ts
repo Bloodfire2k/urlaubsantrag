@@ -114,11 +114,9 @@ router.get('/', authenticateToken, async (req: Request, res: Response) => {
         email: true,
         fullName: true,
         role: true,
-        marketId: true,
         department: true,
-        isActive: true,
+        marketId: true,
         createdAt: true,
-        updatedAt: true,
         market: {
           select: {
             id: true,
@@ -174,11 +172,9 @@ router.get('/:id', authenticateToken, async (req: Request, res: Response) => {
         email: true,
         fullName: true,
         role: true,
-        marketId: true,
         department: true,
-        isActive: true,
+        marketId: true,
         createdAt: true,
-        updatedAt: true,
         market: {
           select: {
             id: true,
@@ -262,11 +258,9 @@ router.put('/:id', authenticateToken, async (req: Request, res: Response) => {
         email: true,
         fullName: true,
         role: true,
-        marketId: true,
         department: true,
-        isActive: true,
+        marketId: true,
         createdAt: true,
-        updatedAt: true,
         market: {
           select: {
             id: true,

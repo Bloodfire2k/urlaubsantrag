@@ -21,12 +21,12 @@ function getYearDateRange(year: number) {
 }
 
 /**
- * Hilfsfunktion: Berechnet Tage zwischen zwei Daten (inklusive)
+ * Hilfsfunktion: Berechnet Tage zwischen zwei Daten (inklusive, UTC-sicher)
  */
 function daysInclusive(start: Date, end: Date) {
-  const s = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate()));
-  const e = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate()));
-  return Math.floor((e.getTime() - s.getTime()) / 86_400_000) + 1;
+  const ms = Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate()) -
+             Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate());
+  return Math.floor(ms / 86400000) + 1;
 }
 
 /**
@@ -425,7 +425,7 @@ router.get('/budget', authenticateToken, async (req: Request, res: Response) => 
 
     const user = await prisma.user.findUnique({
       where: { id: mitarbeiterId },
-      select: { id: true, fullName: true, department: true, marketId: true, urlaubstageAnspruch: true, urlaubstage: true, annualLeaveDays: true },
+      select: { id: true, fullName: true, department: true, marketId: true, annualLeaveDays: true },
     });
     if (!user) return res.status(404).json({ error: 'user_not_found' });
 
@@ -439,8 +439,7 @@ router.get('/budget', authenticateToken, async (req: Request, res: Response) => 
     });
 
     const usedDays = vacations.reduce((sum, v) => sum + daysInclusive(v.startDate, v.endDate), 0);
-    const entitlement =
-      user.urlaubstageAnspruch ?? user.urlaubstage ?? user.annualLeaveDays ?? 25;
+    const entitlement = (user.annualLeaveDays ?? 25);
 
     return res.json({
       jahr,
@@ -482,7 +481,7 @@ router.get('/budget/all', authenticateToken, async (req: Request, res: Response)
 
     const users = await prisma.user.findMany({
       where: userFilter,
-      select: { id: true, fullName: true, department: true, marketId: true, urlaubstageAnspruch: true, urlaubstage: true, annualLeaveDays: true },
+      select: { id: true, fullName: true, department: true, marketId: true, annualLeaveDays: true },
     });
 
     // Alle genehmigten Urlaube im Jahr holen und pro User summieren
@@ -500,13 +499,16 @@ router.get('/budget/all', authenticateToken, async (req: Request, res: Response)
     }
 
     const items = users.map(u => {
-      const entitlement = u.urlaubstageAnspruch ?? u.urlaubstage ?? u.annualLeaveDays ?? 25;
-      const usedDays = usedByUser.get(u.id) ?? 0;
+      const used = usedByUser.get(u.id) ?? 0;
+      const budget = (u.annualLeaveDays ?? 25);
       return {
-        employee: { id: u.id, name: u.fullName, department: u.department, marketId: u.marketId },
-        entitlement,
-        usedDays,
-        remainingDays: Math.max(entitlement - usedDays, 0),
+        userId: u.id,
+        fullName: u.fullName ?? '',
+        department: u.department ?? '',
+        marketId: u.marketId,
+        budgetDays: budget,
+        usedDays: used,
+        remainingDays: Math.max(budget - used, 0),
       };
     });
 
