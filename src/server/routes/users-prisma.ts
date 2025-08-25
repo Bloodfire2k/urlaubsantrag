@@ -39,16 +39,55 @@ const requireAdmin = (req: Request, res: Response, next: any) => {
 }
 
 /**
+ * GET /api/users/counts - Aggregat für Dashboard-Kacheln
+ */
+router.get('/counts', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    console.log('[users:counts] Benutzerrolle:', req.user.role)
+    
+    // Basis-Filter basierend auf Benutzerrolle
+    let whereClause: any = {}
+    
+    if (req.user.role === 'manager') {
+      whereClause.marketId = req.user.marketId
+    }
+    // Admins sehen alle, Employees sehen nur sich selbst (aber das ist hier nicht relevant)
+
+    const [total, admins, managers, mitarbeiter] = await Promise.all([
+      prisma.user.count({ where: whereClause }),
+      prisma.user.count({ where: { ...whereClause, role: 'admin' } }),
+      prisma.user.count({ where: { ...whereClause, role: 'manager' } }),
+      prisma.user.count({ where: { ...whereClause, role: 'employee' } }),
+    ])
+
+    console.log(`[users:counts] total=${total}, admins=${admins}, managers=${managers}, mitarbeiter=${mitarbeiter}`)
+
+    res.json({
+      success: true,
+      counts: { total, admins, managers, mitarbeiter }
+    })
+
+  } catch (error) {
+    console.error('❌ Fehler beim Abrufen der Benutzer-Counts:', error)
+    res.status(500).json({ 
+      error: 'Interner Server-Fehler beim Abrufen der Benutzer-Counts' 
+    })
+  }
+})
+
+/**
  * GET /api/users - Gefilterte Benutzerabfrage
  * 
  * Query-Parameter:
- * - market_id: Filtert nach Markt-ID
- * - department: Filtert nach Abteilung (z.B. "Markt", "Bäckerei")
+ * - search: Sucht in username, fullName, email
+ * - marketId: Filtert nach Markt-ID
+ * - role: Filtert nach Rolle
+ * - department: Filtert nach Abteilung
  * - activeOnly: Nur aktive Benutzer (true/false)
  */
 router.get('/', authenticateToken, async (req: Request, res: Response) => {
   try {
-    const { market_id, department, activeOnly } = req.query
+    const { search, marketId, role, department, activeOnly } = req.query
     
     // Basis-Filter basierend auf Benutzerrolle
     let whereClause: any = {}
@@ -63,8 +102,20 @@ router.get('/', authenticateToken, async (req: Request, res: Response) => {
     // Admins sehen alle Benutzer (keine zusätzlichen Filter)
 
     // Zusätzliche Query-Filter anwenden
-    if (market_id) {
-      whereClause.marketId = parseInt(market_id as string)
+    if (search) {
+      whereClause.OR = [
+        { username: { contains: search as string, mode: "insensitive" } },
+        { fullName: { contains: search as string, mode: "insensitive" } },
+        { email: { contains: search as string, mode: "insensitive" } },
+      ]
+    }
+    
+    if (marketId) {
+      whereClause.marketId = parseInt(marketId as string)
+    }
+    
+    if (role) {
+      whereClause.role = role as string
     }
     
     if (department) {
@@ -75,7 +126,7 @@ router.get('/', authenticateToken, async (req: Request, res: Response) => {
       whereClause.isActive = true
     }
 
-    console.log('🔍 User-Filter:', whereClause)
+    console.log('[users:list] Filter:', whereClause)
 
     const users = await prisma.user.findMany({
       where: whereClause,
@@ -102,7 +153,7 @@ router.get('/', authenticateToken, async (req: Request, res: Response) => {
       ]
     })
 
-    console.log(`✅ ${users.length} Benutzer gefunden`)
+    console.log(`[users:list] count=${users.length}`)
 
     res.json({
       success: true,

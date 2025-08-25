@@ -5,11 +5,15 @@ export interface User {
   email: string
   fullName: string
   role: 'admin' | 'manager' | 'employee'
-  market_id: number
-  department?: string
-  is_active: boolean
-  created_at: string
-  updated_at: string
+  marketId: number
+  department: string
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
+  market?: {
+    id: number
+    name: string
+  }
 }
 
 export interface Market {

@@ -4,10 +4,20 @@ export interface Urlaub {
   mitarbeiterName: string
   startDatum: string
   endDatum: string
-  status: 'pending' | 'approved' | 'rejected'
+  status: 'offen' | 'genehmigt' | 'abgelehnt'
   createdAt: string
   genehmigtVon?: string
   genehmigtAm?: string
+  mitarbeiter?: {
+    id: number
+    fullName: string
+    department: string
+    marketId: number
+    market: {
+      id: number
+      name: string
+    }
+  }
 }
 
 export interface UrlaubBudget {

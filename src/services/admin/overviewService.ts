@@ -56,9 +56,9 @@ export const overviewService = {
     let globalOffen = 0
 
     budgets.forEach(budget => {
-      // Berechne verplante Tage basierend auf pending und approved Urlauben
+      // Berechne verplante Tage basierend auf offen und genehmigt Urlauben
       const mitarbeiterUrlaube = allUrlaube.filter(u => 
-        u.mitarbeiterId == budget.mitarbeiterId && (u.status === 'pending' || u.status === 'approved')
+        u.mitarbeiterId == budget.mitarbeiterId && (u.status === 'offen' || u.status === 'genehmigt')
       )
       
       const verplanteTage = mitarbeiterUrlaube.reduce((total, urlaub) => {
@@ -111,7 +111,7 @@ export const overviewService = {
     if (!mitarbeiterBudget) return 'nicht-eingetragen'
     
     const verplanteTage = mitarbeiterUrlaube
-      .filter(u => u.status === 'pending' || u.status === 'approved')
+      .filter(u => u.status === 'offen' || u.status === 'genehmigt')
       .reduce((total, urlaub) => {
         const start = new Date(urlaub.startDatum)
         const end = new Date(urlaub.endDatum)

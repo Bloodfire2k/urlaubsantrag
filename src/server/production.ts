@@ -9,17 +9,17 @@ import cors from 'cors'
 import helmet from 'helmet'
 import rateLimit from 'express-rate-limit'
 import path from 'path'
-// import { prisma } from '../lib/prisma'
 
 // Bootstrap imports
-import { resetJsonDbIfNeeded, seedAdminIfNeeded } from './bootstrap-json'
 import { migrateAndSeedPostgres } from './bootstrap-postgres'
 
-// Routen importieren
+// Prisma-Routen importieren
+import { usersPrismaRoutes } from './routes/users-prisma'
+import { urlaubPrismaRoutes } from './routes/urlaub-prisma'
+import { marketsPrismaRoutes } from './routes/markets-prisma'
+
+// JSON-basierte Routen (nur für Fallback)
 import { authRoutes } from './routes/auth'
-import { userRoutes } from './routes/users'
-import { urlaubRoutes } from './routes/urlaub'
-import { marktRoutes } from './routes/markets'
 
 const app = express()
 const PORT = Number(process.env.PORT) || 3001
@@ -63,26 +63,22 @@ app.use(express.static(path.join(__dirname, '../../dist')))
 // Datenbank-Initialisierung
 async function initDatabase() {
   try {
-    console.log('✅ JSON-Datenbank wird initialisiert...')
-    console.log('✅ JSON-Datenbank bereit')
-    
-    const dbType = process.env.DB_TYPE ?? 'sqlite';
+    const dbType = process.env.DB_TYPE ?? 'postgres';
     const hasDBUrl = !!process.env.DATABASE_URL;
+    
     console.log('[boot]', { 
       NODE_ENV: process.env.NODE_ENV, 
       DB_TYPE: dbType, 
       hasDBUrl 
     });
     
-    if (process.env.NODE_ENV === 'production' && process.env.JSON_DB_RESET_ON_DEPLOY === '1') {
-      await resetJsonDbIfNeeded()
-      await seedAdminIfNeeded()
-    }
-    
     if (dbType === 'postgres' && hasDBUrl) {
       console.log('🔄 PostgreSQL-Datenbank wird initialisiert...')
       await migrateAndSeedPostgres()
       console.log('✅ PostgreSQL-Datenbank bereit')
+    } else {
+      console.error('❌ PostgreSQL-Datenbank-URL fehlt oder DB_TYPE ist nicht postgres')
+      process.exit(1)
     }
   } catch (error) {
     console.error('❌ Datenbankverbindungsfehler:', error)
@@ -90,11 +86,11 @@ async function initDatabase() {
   }
 }
 
-// API Routes - JSON-basierte Endpunkte
-app.use('/api/auth', authRoutes)
-app.use('/api/users', userRoutes)
-app.use('/api/urlaub', urlaubRoutes) 
-app.use('/api/markets', marktRoutes)
+// API Routes - Prisma-basierte Endpunkte für PostgreSQL
+app.use('/api/auth', authRoutes) // Auth bleibt JSON-basiert (JWT)
+app.use('/api/users', usersPrismaRoutes)
+app.use('/api/urlaub', urlaubPrismaRoutes) 
+app.use('/api/markets', marketsPrismaRoutes)
 
 // Health Check
 app.get('/health', (_req, res) => res.status(200).send('OK'))
@@ -104,7 +100,7 @@ app.get('/api/health', async (req, res) => {
     res.json({ 
       status: 'OK', 
       timestamp: new Date().toISOString(),
-      database: 'JSON-DB ready',
+      database: 'PostgreSQL via Prisma',
       version: process.env.npm_package_version || '1.0.0'
     })
   } catch (error) {
@@ -147,6 +143,7 @@ async function startServer() {
   await initDatabase()
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Production Server läuft auf Port ${PORT}`)
+    console.log(`📊 Verwendet PostgreSQL-Datenbank via Prisma`)
   })
 }
 

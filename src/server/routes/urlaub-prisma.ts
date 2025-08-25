@@ -40,6 +40,87 @@ function getYearDateRange(year: number) {
 }
 
 /**
+ * GET /api/urlaub/counts - Aggregat für Dashboard-Kacheln
+ */
+router.get('/counts', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const { year, marketId } = req.query
+    
+    // Basis-Filter für Benutzer basierend auf Rolle
+    let userFilter: any = {}
+    
+    if (req.user.role === 'employee') {
+      // Mitarbeiter sehen nur ihre eigenen Anträge
+      userFilter.id = req.user.userId
+    } else if (req.user.role === 'manager') {
+      // Manager sehen nur Anträge ihres Marktes
+      userFilter.marketId = req.user.marketId
+    }
+    // Admins sehen alle Anträge (keine Benutzer-Filter)
+
+    // Zusätzliche Query-Filter für Benutzer
+    if (marketId) {
+      userFilter.marketId = parseInt(marketId as string)
+    }
+
+    // Datums-Filter für Jahr
+    let dateFilter: any = {}
+    if (year) {
+      const yearNum = parseInt(year as string)
+      const { startOfYear, endOfYear } = getYearDateRange(yearNum)
+      
+      dateFilter = {
+        AND: [
+          { endDate: { gte: startOfYear } },
+          { startDate: { lte: endOfYear } }
+        ]
+      }
+    }
+
+    console.log('[vacations:counts] Filter:', { userFilter, dateFilter })
+
+    const [offen, genehmigt, abgelehnt] = await Promise.all([
+      prisma.vacation.count({
+        where: {
+          user: userFilter,
+          ...dateFilter,
+          status: 'offen'
+        }
+      }),
+      prisma.vacation.count({
+        where: {
+          user: userFilter,
+          ...dateFilter,
+          status: 'genehmigt'
+        }
+      }),
+      prisma.vacation.count({
+        where: {
+          user: userFilter,
+          ...dateFilter,
+          status: 'abgelehnt'
+        }
+      })
+    ])
+
+    const total = offen + genehmigt + abgelehnt
+
+    console.log(`[vacations:counts] total=${total}, offen=${offen}, genehmigt=${genehmigt}, abgelehnt=${abgelehnt}`)
+
+    res.json({
+      success: true,
+      counts: { total, offen, genehmigt, abgelehnt }
+    })
+
+  } catch (error) {
+    console.error('❌ Fehler beim Abrufen der Urlaub-Counts:', error)
+    res.status(500).json({ 
+      error: 'Interner Server-Fehler beim Abrufen der Urlaub-Counts' 
+    })
+  }
+})
+
+/**
  * GET /api/urlaub - Gefilterte Urlaubsanträge
  * 
  * Query-Parameter:
@@ -93,7 +174,7 @@ router.get('/', authenticateToken, async (req: Request, res: Response) => {
       }
     }
 
-    console.log('🔍 Urlaub-Filter:', { userFilter, dateFilter })
+    console.log('[vacations:list] Filter:', { userFilter, dateFilter })
 
     const urlaubAntraege = await prisma.vacation.findMany({
       where: {
@@ -143,7 +224,7 @@ router.get('/', authenticateToken, async (req: Request, res: Response) => {
       }
     }))
 
-    console.log(`✅ ${transformedAntraege.length} Urlaubsanträge gefunden`)
+    console.log(`[vacations:list] count=${transformedAntraege.length}`)
 
     res.json({
       success: true,

@@ -68,7 +68,7 @@ router.get('/', authenticateToken, async (req: Request, res: Response) => {
       }
     })
 
-    console.log(`✅ ${markets.length} Märkte gefunden`)
+    console.log(`[markets:list] count=${markets.length}`)
 
     res.json({
       success: true,

@@ -2,14 +2,52 @@ import { User, UserFormData } from '../../types/admin/user'
 import { apiFetch } from '../../lib/api'
 
 export const userService = {
-  // Benutzer laden
-  async fetchUsers(): Promise<User[]> {
+  // Benutzer-Counts für Dashboard laden
+  async fetchUserCounts(): Promise<{ total: number; admins: number; managers: number; mitarbeiter: number }> {
     const token = localStorage.getItem('urlaub_token')
     if (!token) {
       throw new Error('Kein Token gefunden')
     }
 
-    const response = await apiFetch(`/users?include_inactive=true`, {
+    const response = await apiFetch(`/users/counts`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    })
+
+    if (response.ok) {
+      const data = await response.json()
+      return data.counts || { total: 0, admins: 0, managers: 0, mitarbeiter: 0 }
+    } else {
+      throw new Error(`Fehler beim Laden der Counts: ${response.status} ${response.statusText}`)
+    }
+  },
+
+  // Benutzer laden mit erweiterten Filtern
+  async fetchUsers(params?: {
+    search?: string;
+    marketId?: number;
+    role?: string;
+    department?: string;
+    activeOnly?: boolean;
+  }): Promise<User[]> {
+    const token = localStorage.getItem('urlaub_token')
+    if (!token) {
+      throw new Error('Kein Token gefunden')
+    }
+
+    // Query-Parameter aufbauen
+    const queryParams = new URLSearchParams()
+    if (params?.search) queryParams.append('search', params.search)
+    if (params?.marketId) queryParams.append('marketId', params.marketId.toString())
+    if (params?.role) queryParams.append('role', params.role)
+    if (params?.department) queryParams.append('department', params.department)
+    if (params?.activeOnly !== undefined) queryParams.append('activeOnly', params.activeOnly.toString())
+
+    const queryString = queryParams.toString()
+    const url = `/users${queryString ? `?${queryString}` : ''}`
+
+    const response = await apiFetch(url, {
       headers: {
         'Authorization': `Bearer ${token}`
       }

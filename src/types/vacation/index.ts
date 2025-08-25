@@ -8,9 +8,9 @@ export interface User {
   id: number
   username: string
   fullName: string
-  market_id: number
+  marketId: number
   department: string
-  is_active: boolean
+  isActive: boolean
 }
 
 export interface Urlaub {
@@ -19,8 +19,18 @@ export interface Urlaub {
   mitarbeiterName: string
   startDatum: string
   endDatum: string
-  status: 'pending' | 'approved' | 'rejected'
+  status: 'offen' | 'genehmigt' | 'abgelehnt'
   createdAt: string
+  mitarbeiter?: {
+    id: number
+    fullName: string
+    department: string
+    marketId: number
+    market: {
+      id: number
+      name: string
+    }
+  }
 }
 
 export const DEPARTMENTS = ['Markt', 'Bäckerei', 'Metzgerei', 'Kasse'] as const
