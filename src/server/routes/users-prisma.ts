@@ -135,18 +135,28 @@ router.get('/', authenticateToken, async (req: Request, res: Response) => {
       })
     ])
 
-    // Daten für Frontend-Kompatibilität transformieren (snake_case)
+    // Daten für Frontend-Kompatibilität transformieren (beide Formate)
     const items = users.map((u: any) => ({
+      // Basis-Felder
       id: u.id,
       username: u.username,
       email: u.email,
       fullName: u.fullName,
       role: u.role,
       department: u.department,
-      market_id: u.marketId,          // UI erwartet snake_case
-      is_active: u.isActive,          // UI erwartet snake_case
+      
+      // camelCase (Prisma-Format, für Rückwärtskompatibilität)
+      marketId: u.marketId,
+      isActive: u.isActive,
       annualLeaveDays: u.annualLeaveDays ?? 25,
       createdAt: u.createdAt,
+      
+      // snake_case (UI-Format, wird von Frontend erwartet)
+      market_id: u.marketId,
+      is_active: u.isActive,
+      created_at: u.createdAt,
+      
+      // Market-Informationen
       market: u.market
     }))
 
@@ -191,6 +201,7 @@ router.get('/:id', authenticateToken, async (req: Request, res: Response) => {
         email: true,
         fullName: true,
         role: true,
+        department: true,
         marketId: true,
         isActive: true,
         annualLeaveDays: true,
@@ -213,8 +224,33 @@ router.get('/:id', authenticateToken, async (req: Request, res: Response) => {
       return res.status(403).json({ error: 'Keine Berechtigung für diesen Benutzer' })
     }
 
+    // Response mit beiden Formaten (camelCase + snake_case)
+    const responseUser = {
+      // Basis-Felder
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      fullName: user.fullName,
+      role: user.role,
+      department: user.department,
+      
+      // camelCase (Prisma-Format)
+      marketId: user.marketId,
+      isActive: user.isActive,
+      annualLeaveDays: user.annualLeaveDays ?? 25,
+      createdAt: user.createdAt,
+      
+      // snake_case (UI-Format)
+      market_id: user.marketId,
+      is_active: user.isActive,
+      created_at: user.createdAt,
+      
+      // Market-Informationen
+      market: user.market
+    }
+
     res.json({
-      user
+      user: responseUser
     })
 
   } catch (error) {
@@ -260,7 +296,10 @@ router.put('/:id', authenticateToken, async (req: Request, res: Response) => {
       role, 
       marketId,
       urlaubsanspruch,
-      annualLeaveDays
+      annualLeaveDays,
+      // snake_case Support für UI-Kompatibilität
+      is_active,
+      market_id
     } = req.body
 
     // Nur Admins können Rollen und Märkte ändern
@@ -268,7 +307,10 @@ router.put('/:id', authenticateToken, async (req: Request, res: Response) => {
     if (email !== undefined) updateData.email = email
     if (fullName !== undefined) updateData.fullName = fullName
     if (department !== undefined) updateData.department = department
+    
+    // isActive mappen (beide Formate unterstützen)
     if (isActive !== undefined) updateData.isActive = isActive
+    if (is_active !== undefined) updateData.isActive = is_active
     
     // Urlaubsanspruch mappen (vom Frontend)
     const annualLeaveDaysValue = Number(urlaubsanspruch ?? annualLeaveDays ?? 25)
@@ -276,7 +318,9 @@ router.put('/:id', authenticateToken, async (req: Request, res: Response) => {
     
     if (req.user.role === 'admin') {
       if (role !== undefined) updateData.role = role
+      // marketId mappen (beide Formate unterstützen)
       if (marketId !== undefined) updateData.marketId = marketId
+      if (market_id !== undefined) updateData.marketId = market_id
     }
 
     const updatedUser = await prisma.user.update({
