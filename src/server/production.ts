@@ -47,6 +47,18 @@ const limiter = rateLimit({
 })
 app.use('/api/', limiter)
 
+// Cache-Control für alle API-Routen deaktivieren
+app.use('/api/*', (req, res, next) => {
+  // ETag deaktivieren und no-store setzen
+  res.set({
+    'ETag': undefined,
+    'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+    'Pragma': 'no-cache',
+    'Expires': '0'
+  })
+  next()
+})
+
 // Datenbank-Initialisierung - Nur PostgreSQL
 async function initDatabase() {
   try {
