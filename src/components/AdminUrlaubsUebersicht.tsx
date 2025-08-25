@@ -3,6 +3,7 @@ import { Calendar, Clock, CheckCircle, AlertCircle, User, ChevronRight, Users } 
 import { useYear } from '../contexts/YearContext'
 import { calculateWorkingDays } from '../utils/vacationCalculator'
 import { apiFetch } from '../../lib/api'
+import { fetchUsersList } from '../../lib/users'
 
 interface Urlaub {
   id: number
@@ -95,16 +96,9 @@ const AdminUrlaubsUebersicht: React.FC = () => {
       if (!token) return
 
       // Lade alle Benutzer zuerst um ihre IDs zu bekommen (nur aktive)
-      const usersResponse = await apiFetch(`/users`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      })
-
-      if (usersResponse.ok) {
-        const users = await usersResponse.json()
-        // Filtere nur aktive Benutzer
-        const activeUsers = users.filter((user: any) => user.is_active !== false)
+      const result = await fetchUsersList()
+      // Filtere nur aktive Benutzer
+      const activeUsers = result.items.filter((user: any) => user.isActive !== false)
         const budgetPromises = activeUsers.map(async (user: any) => {
           try {
             const budgetResponse = await apiFetch(`/urlaub/budget/${user.id}?jahr=${selectedYear}`, {

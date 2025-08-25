@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { User, Market, UserFormData, Toast } from '../../types/admin/user'
 import { userService } from '../../services/admin/userService'
+import { fetchUsersList } from '../../lib/users'
 import { useAuth } from '../../contexts/AuthContext'
 import { useYear } from '../../contexts/YearContext'
 import { apiFetch } from '../../lib/api'
@@ -43,9 +44,9 @@ export const useUserManagement = () => {
   const fetchUsers = async () => {
     setLoading(true)
     try {
-      const users = await userService.fetchUsers()
+      const result = await fetchUsersList(users)
       // Nach Nachnamen sortieren
-      const sortedUsers = users.sort((a, b) => {
+      const sortedUsers = result.items.sort((a, b) => {
         const namePartsA = a.fullName.trim().split(' ')
         const namePartsB = b.fullName.trim().split(' ')
         const nachNameA = namePartsA.length > 1 ? namePartsA[namePartsA.length - 1] : a.fullName

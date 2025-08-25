@@ -26,6 +26,7 @@ const app = express()
 const PORT = Number(process.env.PORT) || 3001
 
 app.set('trust proxy', 1) // wichtig hinter Traefik
+app.set('etag', false)
 
 // 1) Security + Parser
 app.disable('x-powered-by')
@@ -49,13 +50,9 @@ app.use('/api/', limiter)
 
 // Cache-Control für alle API-Routen deaktivieren
 app.use('/api/*', (req, res, next) => {
-  // ETag deaktivieren und no-store setzen
-  res.set({
-    'ETag': undefined,
-    'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
-    'Pragma': 'no-cache',
-    'Expires': '0'
-  })
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+  res.set('Pragma', 'no-cache')
+  res.set('Expires', '0')
   next()
 })
 

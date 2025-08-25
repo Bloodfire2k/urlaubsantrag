@@ -1,5 +1,6 @@
 import { Market, User, Urlaub } from '../../types/vacation'
 import { apiFetch } from '../../lib/api'
+import { fetchUsersList } from '../../lib/users'
 
 export const vacationService = {
   // Märkte laden
@@ -23,19 +24,11 @@ export const vacationService = {
 
   // Benutzer laden
   async fetchUsers(token: string): Promise<User[]> {
-    const response = await apiFetch(`/users`, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
-    })
-
-    if (response.ok) {
-      const data = await response.json()
-      const usersArray = data.users || []
-      return Array.isArray(usersArray) ? usersArray.filter((user: User) => user.isActive) : []
-    } else {
-      console.error('Users API error:', response.status)
+    try {
+      const result = await fetchUsersList()
+      return result.items.filter((user: User) => user.isActive)
+    } catch (error) {
+      console.error('Users API error:', error)
       return []
     }
   },
