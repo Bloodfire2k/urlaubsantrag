@@ -2,6 +2,7 @@
  * Production Server für Coolify Deployment
  * 
  * Optimiert für Container-Umgebung mit PostgreSQL
+ * Keine Fallbacks - nur PostgreSQL + JSON-Responses
  */
 
 import express from 'express'
@@ -26,22 +27,15 @@ const PORT = Number(process.env.PORT) || 3001
 
 app.set('trust proxy', 1) // wichtig hinter Traefik
 
-// Sicherheits-Middleware
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      connectSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-      fontSrc: ["'self'", "https://fonts.gstatic.com"],
-      imgSrc: ["'self'", "data:", "https:"],
-      scriptSrc: ["'self'"]
-    }
-  }
+// 1) Security + Parser
+app.disable('x-powered-by')
+app.use(helmet())
+app.use(cors({ 
+  origin: process.env.ALLOWED_ORIGIN?.split(',') ?? 'https://urlaub.myfire.cloud', 
+  credentials: true 
 }))
-
-const allowedOrigin = process.env.ALLOWED_ORIGIN || 'https://urlaub.myfire.cloud'
-app.use(cors({ origin: allowedOrigin, credentials: true }))
+app.use(express.json({ limit: '10mb' }))
+app.use(express.urlencoded({ extended: true }))
 
 // Rate Limiting für Production
 const limiter = rateLimit({
@@ -53,14 +47,7 @@ const limiter = rateLimit({
 })
 app.use('/api/', limiter)
 
-// Body Parser
-app.use(express.json({ limit: '10mb' }))
-app.use(express.urlencoded({ extended: true }))
-
-// Static files (Frontend)
-app.use(express.static(path.join(__dirname, '../../dist')))
-
-// Datenbank-Initialisierung
+// Datenbank-Initialisierung - Nur PostgreSQL
 async function initDatabase() {
   try {
     const dbType = process.env.DB_TYPE ?? 'postgres';
@@ -68,26 +55,26 @@ async function initDatabase() {
     
     console.log('[boot]', { 
       NODE_ENV: process.env.NODE_ENV, 
-      DB_TYPE: dbType, 
-      hasDBUrl 
+      DB_TYPE: process.env.DB_TYPE, 
+      hasDBUrl: !!process.env.DATABASE_URL 
     });
     
-    if (dbType === 'postgres' && hasDBUrl) {
-      console.log('🔄 PostgreSQL-Datenbank wird initialisiert...')
-      await migrateAndSeedPostgres()
-      console.log('✅ PostgreSQL-Datenbank bereit')
-    } else {
+    if (dbType !== 'postgres' || !hasDBUrl) {
       console.error('❌ PostgreSQL-Datenbank-URL fehlt oder DB_TYPE ist nicht postgres')
       process.exit(1)
     }
+    
+    console.log('🔄 PostgreSQL-Datenbank wird initialisiert...')
+    await migrateAndSeedPostgres()
+    console.log('✅ PostgreSQL-Datenbank bereit')
   } catch (error) {
     console.error('❌ Datenbankverbindungsfehler:', error)
     process.exit(1)
   }
 }
 
-// API Routes - Prisma-basierte Endpunkte für PostgreSQL
-app.use('/api/auth', authRoutes) // Auth bleibt JSON-basiert (JWT)
+// 2) API-Routen VOR static
+app.use('/api/auth', authRoutes)
 app.use('/api/users', usersPrismaRoutes)
 app.use('/api/urlaub', urlaubPrismaRoutes) 
 app.use('/api/markets', marketsPrismaRoutes)
@@ -95,34 +82,27 @@ app.use('/api/markets', marketsPrismaRoutes)
 // Health Check
 app.get('/health', (_req, res) => res.status(200).send('OK'))
 
-app.get('/api/health', async (req, res) => {
-  try {
-    res.json({ 
-      status: 'OK', 
-      timestamp: new Date().toISOString(),
-      database: 'PostgreSQL via Prisma',
-      version: process.env.npm_package_version || '1.0.0'
-    })
-  } catch (error) {
-    res.status(500).json({ 
-      status: 'ERROR', 
-      timestamp: new Date().toISOString(),
-      database: 'error',
-      error: 'Server-Fehler' 
-    })
-  }
-})
+// 3) JSON-404 für unbekannte /api
+app.use('/api/*', (_req, res) => res.status(404).json({ error: 'not_found' }))
 
-// Alle anderen Routen an Frontend weiterleiten (SPA)
-app.get('*', (req, res) => {
+// 4) Einheitlicher JSON-Error-Handler NUR für /api
+app.use('/api', (err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  console.error('[api-error]', err);
+  const code = err?.status || err?.statusCode || 500;
+  res.status(code).json({ error: 'internal', message: err?.message ?? 'internal_error' });
+});
+
+// 5) Static + SPA-Fallback NACH den /api-Handlern
+app.use(express.static(path.join(__dirname, '../../dist')))
+app.get('*', (_req, res) => {
   res.sendFile(path.join(__dirname, '../../dist/index.html'))
 })
 
-// Error Handler
+// Global Error Handler (für alle anderen Routen)
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
   console.error('Server Error:', err)
   res.status(500).json({ 
-    error: 'Interner Server-Fehler',
+    error: 'internal_error',
     message: process.env.NODE_ENV === 'development' ? err.message : 'Etwas ist schiefgelaufen'
   })
 })
