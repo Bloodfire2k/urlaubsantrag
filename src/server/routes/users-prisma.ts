@@ -279,6 +279,13 @@ router.put('/:id', authenticateToken, async (req: Request, res: Response) => {
 })
 
 /**
+ * GET /api/users/healthz - Health Check
+ */
+router.get('/healthz', (_req: Request, res: Response) => {
+  res.json({ ok: true })
+})
+
+/**
  * PUT /api/users/:id/password - Passwort ändern
  */
 router.put('/:id/password', authenticateToken, async (req: Request, res: Response) => {
