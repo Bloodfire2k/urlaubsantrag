@@ -85,9 +85,6 @@ tmp/
 # SQLite development database (wird in Production nicht benötigt)
 prisma/dev.db*
 
-# Prisma migrations (werden im Container ausgeführt)
-prisma/migrations/
-
 # Test files
 test/
 tests/
