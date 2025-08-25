@@ -1,6 +1,20 @@
 import { Request, Response, NextFunction } from 'express'
 import jwt from 'jsonwebtoken'
 
+// Erweitere den Request-Typ um user
+declare global {
+  namespace Express {
+    interface Request {
+      user?: {
+        id: number
+        role: string
+        marketId?: number
+        username: string
+      }
+    }
+  }
+}
+
 // JWT Secret
 const JWT_SECRET = process.env.JWT_SECRET || (() => { throw new Error('JWT_SECRET environment variable is required') })()
 
